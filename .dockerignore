@@ -1,0 +1,39 @@
+# Keep the production image clean and free of dev/VCS/env-specific material.
+
+# Version control & this build's own files
+.git
+.gitignore
+.dockerignore
+Dockerfile
+
+# Local DDEV development environment (dev-only; never deployed)
+.ddev/
+.vscode/
+
+# Local env
+.env
+.env.*
+
+# --- Environment-specific "secret" files — production provisions its OWN ---
+# (baking the local MOCK would break auth / leak data)
+iam.php
+json/dataDev.json
+# Student photos (PII), provisioned per-environment
+images/
+
+# Response data dirs — recreated writable in the image / mounted as volumes
+studentResponses/
+groupResponses/
+
+# Docs
+*.md
+README*
+
+# OS / editor junk (Finder metadata, AppleDouble resource forks, swap files)
+.DS_Store
+**/.DS_Store
+._*
+**/._*
+Thumbs.db
+*.swp
+*.swo
