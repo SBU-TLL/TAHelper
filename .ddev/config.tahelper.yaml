@@ -1,0 +1,11 @@
+# DDEV-only: provision the env-supplied (gitignored) files on start, so a fresh
+# clone works: real-attr iam.php, the Shibboleth .htaccess gate, the dev roster
+# (dataDev.json), and the runtime response dirs. Never overwrites existing files.
+hooks:
+  post-start:
+    - exec: |
+        cd /var/www/html
+        [ -f www/iam.php ] || cp .ddev/tahelper/iam.php www/iam.php
+        [ -f www/.htaccess ] || cp .ddev/tahelper/htaccess www/.htaccess
+        [ -f www/json/dataDev.json ] || cp .ddev/tahelper/dataDev.json www/json/dataDev.json
+        mkdir -p www/studentResponses www/groupResponses
