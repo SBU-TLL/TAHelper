@@ -9,3 +9,5 @@
 # ignore directories
 *Responses/
 images/
+
+client_secret.json
