@@ -4,8 +4,8 @@
 ._*
 .vscode
 # ignore secret files
-iam.php
-json/dataDev.json
+/www/iam.php
+/www/json/dataDev.json
 # ignore directories
 *Responses/
 images/
