@@ -9,3 +9,5 @@ json/dataDev.json
 # ignore directories
 *Responses/
 images/
+
+client_secret.json
