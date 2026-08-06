@@ -47,6 +47,7 @@ Nothing existing is overwritten, so your local edits survive restarts.
 ddev roster                     # regenerate the synthetic roster + photos
 ddev roster --students 60 --sections 3
 ddev photos --verify www/json/data.json   # check photo filenames match a roster
+ddev roster-real BIO201         # import the REAL roster (staff only — see below)
 ```
 
 ---
@@ -64,6 +65,61 @@ ddev photos --verify www/json/data.json   # check photo filenames match a roster
   template is in the repo.
 * `ddev start` installs a **pre-commit hook** that refuses to commit the
   generated roster files, the credentials, or extracted SOLAR pages/photos.
+
+### Importing the real roster (staff only)
+
+Only needed if you are maintaining the live course — day-to-day development
+should stay on the synthetic roster.
+
+**1. Get the credentials.** Ask the maintainer for `client_secret.json` (the
+Google service-account key) and drop it in the **repo root**, next to
+`makeJSON.py`. It is gitignored. Without it the import stops with a message
+telling you to use the synthetic generator instead.
+
+**2. Import the roster.**
+
+```bash
+ddev roster-real BIO201        # or BIO354
+```
+
+This **writes** `www/json/data.json`, `templates.json` and `log.json`. The text
+it prints is only a progress log — do **not** redirect it to a file (`> x.json`
+gives you a log full of student data, not a roster). Add `TAHELPER_VERBOSE=1`
+for per-tab detail.
+
+Both the roster *and* the questionnaires come from the spreadsheet, so this is
+also how you pick up edited questions.
+
+**3. Get the photos.** These cannot be fetched automatically — see
+[`extractStudentsFromHTML.py`](#extractstudentsfromhtmlpy--student-photos)
+below. Save the SOLAR roster pages, then:
+
+```bash
+ddev photos --in ./solar-pages --out ./solar-pages/out
+ddev photos --verify www/json/data.json     # who would have no photo?
+```
+
+Copy the resulting `{Name},{hash}.jpg` files into the course's images directory
+(`www/images`, which is a symlink into the userData storage).
+
+**4. When you're done**, get the real data off your machine:
+
+```bash
+ddev roster                    # restores the synthetic roster
+```
+
+> ⚠️ While a real import is in place, your working copy holds real student
+> names and netIDs. They are gitignored and the pre-commit hook blocks
+> committing them, but don't copy them elsewhere, and don't leave them lying
+> around after you're finished.
+
+**On the production host** run the script directly — with no
+`TAHELPER_JSON_DIR` set it writes to the live path
+(`/home/tltsecure/apache2/htdocs/<COURSE>/TAHelper/json/`):
+
+```bash
+python3 makeJSON.py BIO201
+```
 
 ---
 
