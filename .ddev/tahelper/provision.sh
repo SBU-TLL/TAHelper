@@ -63,7 +63,11 @@ if [ -d "$REPO/.git/hooks" ] && [ ! -e "$HOOK" ]; then
 # --diff-filter=ACM: only files being ADDED or MODIFIED. Removing these paths
 # from tracking (a deletion) is exactly what we want people to be able to do.
 blocked=$(git diff --cached --name-only --diff-filter=ACM | grep -E \
-  '^(www/json/(data|templates|log)\.json|client_secret\.json|Temp/|.*_files/)' || true)
+  -e '^(www/json/(data|templates|log)\.json|client_secret\.json)$' \
+  -e '(^|/)(Temp|out)/' \
+  -e '_files/' \
+  -e 'SA_LEARNING_MANAGEMENT' \
+  -e ',[0-9a-f]{64}\.(jpg|jpeg|png|JPG)$' || true)
 if [ -n "$blocked" ]; then
     echo "ERROR: refusing to commit files that may contain real student data:" >&2
     echo "$blocked" | sed 's/^/  /' >&2

@@ -50,18 +50,27 @@ def make_blank_image(path: str) -> None:
         open(path, "wb").close()
 
 
+def find_roster_pages(in_dir: str):
+    """Locate every saved roster page under in_dir.
+
+    Browsers save a page as `<name>.html` + `<name>_files/`, and the roster
+    markup lives at `<name>_files/SA_LEARNING_MANAGEMENT.SS_FACULTY.html`.
+    Rather than rely on that pairing — the .html is often renamed afterwards, or
+    people point --in straight at the _files directory — just search the tree for
+    the roster page itself. Its own directory holds the photos.
+    """
+    return sorted(glob.glob(os.path.join(in_dir, "**", ROSTER_PAGE), recursive=True))
+
+
 def scrape(in_dir: str):
     """Yield (name, student_id, photo_path) for every student found."""
     blank = os.path.join(in_dir, BLANK_IMAGE)
     if not os.path.exists(blank):
         make_blank_image(blank)
 
-    for html_file in sorted(glob.glob(os.path.join(in_dir, "*.html"))):
-        resource_dir = f"{html_file.split('.html')[0]}_files"
-        page = os.path.join(resource_dir, ROSTER_PAGE)
-        if not os.path.exists(page):
-            print(f"  skip {os.path.basename(html_file)}: no {ROSTER_PAGE}")
-            continue
+    for page in find_roster_pages(in_dir):
+        resource_dir = os.path.dirname(page)
+        print(f"  reading {os.path.relpath(page, in_dir)}")
 
         with open(page, encoding="utf-8", errors="replace") as fh:
             soup = BeautifulSoup(fh.read(), "html.parser")
@@ -72,10 +81,13 @@ def scrape(in_dir: str):
         photos = []
         for div in soup.find_all("div", {"id": re.compile("EMPL_PHOTO_EMPLOYEE_PHOTO")}):
             tag = div.find("img")
-            if not tag:
+            if not tag or not tag.get("src"):
                 photos.append(blank)
             else:
-                photos.append(os.path.join(resource_dir, tag["src"].split("/")[1]))
+                # The src is relative to the saved page (e.g. "<name>_files/x.JPG"),
+                # but the folder may have been renamed — the file itself always
+                # sits next to the roster page, so match on the basename.
+                photos.append(os.path.join(resource_dir, os.path.basename(tag["src"])))
 
         for idx, sid in enumerate(ids):
             name = names[idx].strip() if idx < len(names) else ""
