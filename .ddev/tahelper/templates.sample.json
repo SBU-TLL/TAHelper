@@ -60,32 +60,11 @@
     "Student Evaluation": [
         {
             "Answer Choices": [
-                "Often",
-                "Occasionally",
-                "Rarely",
-                "Not sure"
+                "Present",
+                "Absent",
+                "+10min_late"
             ],
-            "Question": "How often is this student present in class?",
-            "Type": "SC"
-        },
-        {
-            "Answer Choices": [
-                "Often",
-                "Occasionally",
-                "Rarely",
-                "Not sure"
-            ],
-            "Question": "How often is this student engaged in off-task behavior?",
-            "Type": "SC"
-        },
-        {
-            "Answer Choices": [
-                "Often",
-                "Occasionally",
-                "Rarely",
-                "Not sure"
-            ],
-            "Question": "How often does this student share their ideas, confusions, or knowledge?",
+            "Question": "Was this student present or absent today?",
             "Type": "SC"
         },
         {
@@ -94,13 +73,21 @@
                 "Satisfactory",
                 "Unsatisfactory"
             ],
-            "Question": "How would you rate this student?",
+            "Default": "Satisfactory",
+            "Question": "How would you evaluate this student?",
             "Type": "SC"
         },
         {
             "Answer Choices": [],
-            "Question": "Comments",
+            "Question": "Comments (optional)",
             "Type": "TA"
+        },
+        {
+            "Answer Choices": [
+                ""
+            ],
+            "Question": "",
+            "Type": ""
         }
     ]
 }

@@ -1,0 +1,7 @@
+#!/bin/bash
+## Description: Extract student photos from saved SOLAR pages (or --verify a roster)
+## Usage: photos [--in DIR] [--out DIR] [--verify www/json/data.json]
+## Example: "ddev photos --verify www/json/data.json"
+## ProjectTypes: php
+cd /var/www/html || exit 1
+python3 extractStudentsFromHTML.py "$@"

@@ -1,19 +1,29 @@
-/* JavaScript file for handling UI in TAHelper */
+//* JavaScript file for handling UI in TAHelper */
 
 const ROLES = {
   ADMIN: {
     PROFESSOR: "Professor",
-    GTA: "GTA"
+    GTA: "GTAs"
   },
   UGTA: "Group Facilitator"
 }
 
 class TAHelperUI {
-  constructor (userInfo, studInfo) {
+  constructor (userInfo,studInfo,TAInfo,sectionInfo) {
     this.userInfo = userInfo;
     this.userRole = userInfo.Type;
     this.studInfo = studInfo;
-    // console.log(this.userInfo, this.studInfo)
+    this.TAInfo=TAInfo;
+    this.sectionInfo=sectionInfo;
+    switch (this.userRole) {
+        case ROLES.ADMIN.PROFESSOR:
+        case ROLES.ADMIN.GTA:
+          this.isAdmin=true;
+          break;
+        default:
+ 	  this.isAdmin=false;
+	}
+    //console.log(this.isAdmin)
 
     this.state = {
       imagesLoaded: 0,
@@ -31,7 +41,7 @@ class TAHelperUI {
   setWaitingOnClearPrompt (val) { this.state.waitingOnClearPrompt = val; }
   setEnableGroupEvaluations (val) { this.state.enableGroupEvaluations = val; }
 
-  /*  */
+  /* Handles any necessary UI updates according to changes in state */
   updateState() {
     if (!this.state.hasUnsavedChanges) {
       this.showSavedLabel();
@@ -63,7 +73,7 @@ class TAHelperUI {
         default:
           console.log("Invalid role: ", this.userRole)
       }
-      
+
       this.initMenu();
       resolve("done");
     });
@@ -72,6 +82,7 @@ class TAHelperUI {
 
   /* Displays all of the sessions that the user is responsible for */
   showSessions() {
+    console.log(this.sectionInfo["Section"]);
     // convert to set to remove duplicates, then back to array
     var sessions = new Set(this.userInfo.Group.map(id => id.split('-')[0]));
     var sessionDivs = Array.from(sessions).map(sessionID => $('<div/>', {
@@ -79,31 +90,77 @@ class TAHelperUI {
       class: `session card-item flexChildren`
     }).append($('<div/>', {
       class: `flexText header-font`,
-      html: `Session ${sessionID}`
-    })).click(evt => this.handleClickEvent($(evt.currentTarget))));
+      html: `Section ${sessionID}  ${this.sectionInfo["Section"][sessionID]}`
+    })).click(evt => this.handleClickEvent(evt)));
 
     this.addToParentById("content" /* parent container */, sessionDivs);
-  }
+	if(sessions.size==1){
+	$('#1').trigger("click");
+	}  
+}
 
 
   /* Displays all of the groups that the user is responsible for */
   showSessionGroups (sessionID=null) {
-    var groups = (sessionID) ? this.userInfo.Group.filter(key => key.split('-')[0] == sessionID) : this.userInfo.Group;
+  var groups = (sessionID) ? this.userInfo.Group.filter(key => key.split('-')[0] == sessionID) : this.userInfo.Group;
+//if(!sessionID){
+//sessionID= groups[0].split('-')[0];
+//}
+ let groupMap=[[1,2,3,997,998,999],
+[4,5,6,29,19,20],
+[7,8,9,30,21,22],
+[10,11,12,33,23,24],
+[13,14,15,31,25,26],
+[16,17,18,333,27,28]].flat().map(a=>`${sessionID}-${a}`)
+let groupsFilter;
+console.log(this.userInfo)
+if(window.location.href.includes("201") && !this.userInfo.Type=="Group Facilitator"){
+groupsFilter= [...groups]//.map(a=>`${sessionID}-${a}`);
+groups=[...groupMap]; 
+}
+else{
+groups= groups.sort(function(a, b){return a - b})
+}
     var groupDivs = groups.map(groupID => $('<div/>', {
       id: `${groupID}`,
       class: `session-group card-item flexChildren`
     }).append($('<div/>', {
       class: `flexText subheader-font subheader-color1`,
-      html: `Session ${groupID.split('-')[0]}`
+      html: `Section ${groupID.split('-')[0]}`
     }), $('<div/>', {
       class: `flexText header-font`,
       html: `Group ${groupID.split('-')[1]}`
-    })).click(evt => this.handleClickEvent($(evt.currentTarget))));
+    }), $('<div/>', {
+      class: `flexText ta-font`,
+      html: `TA: ${this.getTAfromGroupID(groupID)}`
+     }),$('<div/>')
+
+     ).click(evt => this.handleClickEvent(evt)));
 
     this.addToParentById("content" /* parent container */, groupDivs);
+  if(groupsFilter){
+let removeGroups= groups.filter((group)=>!groupsFilter.includes(group))
+removeGroups.forEach(groupID=>{
+console.log(`#${groupID}`)
+$(`#${groupID}`).children().css("visibility","hidden");
+$(`#${groupID}`).off("click")
+})
+}
   }
+  getTAfromGroupID(groupID){
+console.log(this.TAInfo["nkdean"])
+var TA=  this.TAInfo[Object.keys(this.TAInfo).find(TA=>
+(this.TAInfo[TA].Group.includes(groupID) 
+&& 
+this.TAInfo[TA].Type=='Group Facilitator'
+)
+)] ||  this.TAInfo[Object.keys(this.TAInfo).find(TA=>
+this.TAInfo[TA].GTAGroups.includes(groupID))]    ||       {Name:"Not assigned or Admin"}
 
+return TA.Name
+}
 
+  
   /* Displays all of the students in the group */
   showStudsInGroup (groupID) {
     var groupInfo = this.studInfo.filter(grp => grp.length > 0 && grp[0].Group == groupID)[0];
@@ -123,31 +180,45 @@ class TAHelperUI {
     } else {
       this.hideGroupEvalLink(groupID);
     }
-
+    var hidden="";
+    //if(this.userRole.includes("Facil")){
+    //hidden="hide"
+    //}
     var studDivs = groupInfo.map(student => $('<div/>', {
       id: `${student.NetID}`,
       class: `student subcard-item flexChildren`,
     }).append($('<img/>', {
       class: `profile`,
+      id: `${student.NetID}_img`,
       // src: `images/${i.Name.replaceAll(' ','_').replaceAll('\'','-') + "," + i.SID}.jpg}` // students might have names with special characters
       src: `images/${student.Name},${student.SID}.jpg`,
       onload: () => this.handleImageLoaded(),
       // onerror: `this.src='images/no-image-available.jpg'` // alt image if none found
-    }), $('<div/>', {
+    }).click(evt => {this.handleClickEvent(evt)} )
+    ,$('<input>',{type:"file",accept:"image/*",capture:"enviroment",id:`${student.NetID}_upload` ,style:"display:none"}) 
+    ,$('<div/>', {
       class: `student-info flexText`
     }).append($('<label/>', {
       class: `subheader-width subheader-font`,
       html: `${student.Name}`
     }), $('<label/>', {
-      class: `subheader-color2`,
+      class: `subheader-width subheader-color2`,
       html: `NetID: ${student.NetID}`
-    }))).click(evt => this.handleClickEvent($(evt.currentTarget))));
+    }), $('<label/>', {
+      class: `subheader-color2 ${hidden}`,
+      html: `Warning: ${student.Warning}`
+    })
+
+
+   ))//.click(evt => this.handleClickEvent(evt))
+);
 
     this.addToParentById(groupID /* parent container */, studDivs);
-  }
+    $(`.student`).click(evt => this.handleClickEvent(evt)); 
+}
 
 
-  /* Displays student questionnaire form */
+  //* Displays student questionnaire form */
   showStudForm (template, studentID) {
     // TODO: group evaluation div takes a while to disappear
     $('#group-evaluation-div').remove();
@@ -164,7 +235,8 @@ class TAHelperUI {
 
   /* Creates and returns a questionnaire form using the given template */
   makeForm (type, template) {
-    // console.log(type, template)
+     template=template.filter(question=>question.Question) //removes blank lines caused by Legend in spreadsheet
+	console.log(type, template)
     var formType = (type == "student") ? "stud-eval" : "group-eval";
     var formElements = template.map((data, i) => $('<div/>', {
       id: `question-${i}`, // question-[questionID]
@@ -191,7 +263,7 @@ class TAHelperUI {
     return form.append(formElements, saveDiv);
   }
 
-  /* Constructs and returns a DOM element with the given data */
+  /* Constructs an input element to add to a form */
   makeFormInput (questionID, data) {
     const inputTypes = {
       "TB": "text",
@@ -207,11 +279,12 @@ class TAHelperUI {
     switch (questionType) {
       case "SC": case "MC":
         var optionElements = Object.values(options).map((opt, i) => {
+	  let checked = data["Value"] || data["Default"];
           let input = $('<input/>', {
             id: `${questionID}-${i}`, // question-[questionID]-[optionNumber]
             type: inputTypes[questionType],
             name: `${questionID}`,
-            checked: (opt == data["Value"])
+            checked: (opt == checked)
           }).click(() => { this.setHasUnsavedChanges(true) });
 
           let label = $('<label/>', {
@@ -219,7 +292,7 @@ class TAHelperUI {
             for: `${questionID}-${i}`,
             html: `${opt}`
           });
-          
+
           return input.add(label);
         });
 
@@ -248,8 +321,10 @@ class TAHelperUI {
 
   /* Creates and displays a modal in the foreground */
   makeModal (type) {
-    const headerLabel = {
+    
+      const headerLabel = {
       "download": "Download Options",
+      "import":"Last Successful Import &nbsp;",
       "clear": "Clear Options",
       "confirm-save": "Confirm Changes",
       "confirm-clear": "Confirm Clear"
@@ -257,6 +332,7 @@ class TAHelperUI {
     const footerLabel = {
       "download": ["Download"],
       "clear": ["Clear"],
+      "import":[],
       "confirm-save": ["Save Changes", "Discard Changes"],
       "confirm-clear": ["Download then clear", "Clear without downloading"]
     }
@@ -269,15 +345,16 @@ class TAHelperUI {
       class: 'modal-close-button',
       html: '&times;' // unicode char for 'x' symbol
     }).click(evt => this.handleModalCloseRequest()));
-    
+
     // Add modal footer buttons
+    if (footerLabel[type].length > 0) {
     var modalFooter = $('<div/>', {
       class: 'modal-footer',
     }).append($('<button/>', {
       class: 'modal-request-button',
       html: `${footerLabel[type][0]}`
     }).click(evt => this.handleModalSubmitRequest(type)));
-
+	}
     if (footerLabel[type].length > 1) {
       modalFooter.append($('<button/>', {
         class: 'modal-request-button',
@@ -295,19 +372,27 @@ class TAHelperUI {
       case "clear":
         let optionAll = this.makeSelectionModal(type, "all", null);
         let optionGroups = this.makeSelectionModal(type, "session-group", this.userInfo.Group);
-        if (this.userRole in ROLES.ADMIN) {
+        if (this.isAdmin) {
           let optionEvaluators = this.makeSelectionModal(type, "evaluator", this.userInfo.Evaluators);
           modalBody.append(optionAll, optionEvaluators, optionGroups);
         } else {
           modalBody.append(optionAll, optionGroups);
         }
-        break 
+        break
       case "confirm-save":
       case "confirm-clear":
         let prompt = this.makeConfirmationModal(type);
         modalBody.append(prompt);
         break
-      default:
+      case "import":
+        $('.modal-footer').hide()
+        fetch("json/log.json")
+        .then(function(response) { return response.json(); })
+        .then(function(json) {
+          modalBody.append(json.lastImport)
+         });
+        break;
+       default:
         console.log("Unknown modal type: ", type)
         return;
     }
@@ -323,7 +408,7 @@ class TAHelperUI {
     this.addToParentById('content' /* parent container */, modalDiv);
   }
 
-  /* Constructs and returns a DOM element with the given data */
+  /* Constructs a selection modal */
   makeSelectionModal (type, inputGroup, data) {
     // console.log(type, data)
     var sectionID = `section-${inputGroup}`;
@@ -388,7 +473,7 @@ class TAHelperUI {
           }).change(evt => this.updateInputGroup(evt.currentTarget));
           let sessionLabel = $('<label/>', {
             for: `section-session-option-${sessionID}`,
-            html: `Session ${sessionID}<br>`
+            html: `Section ${sessionID}<br>`
           });
 
           let groups = data.filter(x => x.includes(sessionID)).map(groupID => {
@@ -418,7 +503,7 @@ class TAHelperUI {
     }
   }
 
-  /*  */
+  /* Constructs a confirmation  modal */
   makeConfirmationModal (type) {
     const promptLabel = {
       "confirm-save": "There are <b><u>unsaved changes</u></b> on the page you are currently on. Would you like to save before returning to the previous page?",
@@ -441,20 +526,62 @@ class TAHelperUI {
     }
   }
 
-
+ reloadImg(url) {
+  fetch(url, { cache: 'reload', mode: 'no-cors' })
+  document.body.querySelectorAll(`img[src='${url}']`)
+    .forEach(img => img.src = url)
+}
   /* Handles click event when a group is selected */
-  handleClickEvent (clickedItem) {
-    // console.log(clickedItem)
-    clickedItem.off("click"); // removes click event listener to prevent registering multiple clicks
+  handleClickEvent (evt) {
+   let clickedItem=$(evt.currentTarget);
+    console.log(clickedItem);
+   // clickedItem.off("click"); // removes click event listener to prevent registering multiple clicks
 
     var clickedID = clickedItem.attr("id");
     var clickedClass = clickedItem.attr("class").split(' ')[0];
     // console.log(clickedID, clickedClass);
-    switch (clickedClass) {
+   if(clickedClass=="profile" && clickedItem.hasClass("profile-left")){
+
+	evt.stopPropagation();
+	evt.cancelBubble = true;
+               let fileID =`${clickedID.replace("_img","_upload")}`;
+                console.log(fileID);
+                let fileTag= $(`#${clickedID.replace("_img","_upload")}`)
+                fileTag.trigger('click').on( "change",()=>{
+                var fd = new FormData();
+                var files = fileTag[0].files[0];
+                fd.append("fileName", clickedItem.attr("src"));
+                fd.append('file', files);
+                $.ajax({ 
+                    url: 'upload.php',
+                    type: 'post',
+                    data: fd,
+                    contentType: false,
+                    processData: false,
+                    success: (response)=>{
+                        if(response != 0){
+                        
+                        this.reloadImg(clickedItem.attr("src"))
+                        }
+                        else{
+                            alert('file not uploaded');
+                        }
+                    }});
+                });
+        return false;
+
+} 
+else{
+
+ if (clickedClass!="profile"){
+clickedItem.off("click");
+}
+   switch (clickedClass) {
+
       case "session":
         this.removeItemsByClass(clickedClass);
         this.showSessionGroups(clickedID);
-        if (this.userRole in ROLES.ADMIN) {
+        if (this.isAdmin) {
           this.showBackBtn();
         }
         break
@@ -465,7 +592,6 @@ class TAHelperUI {
         clickedHeaderText.html(text);
         clickedHeaderText.addClass("header-width");
         clickedSubheaderText.remove();
-
         this.expandCardItem(clickedItem);
         this.removeItemsByClass(clickedClass, clickedID);
         this.showStudsInGroup(clickedID);
@@ -485,48 +611,62 @@ class TAHelperUI {
         let groupID = $(clickedItem.parent()[0]).attr("id");
         $("#content").trigger('request:student-eval', [this.userInfo.NetID, groupID, clickedID]);
         break
-      default:
+     default:
         console.log("Invalid class: " + clickedClass)
-    }
+	}   
+ }
   }
 
 
   /* Handles click event for back button */
   handleBackRequest() {
+ console.log(ROLES.ADMIN,this.userRole)
+    let whichBack;
     var selectedStudent = $('.selected-student');
     var selectedGroup = $('.selected-group');
     var selectedGrpID = selectedGroup.attr("id");
-    // console.log(selectedStudent, selectedGroup, selectedGrpID)
+     console.log(selectedStudent, selectedGroup, selectedGrpID)
 
     // determine which page to backtrack to
     if (selectedStudent.length == 0) {
+	whichBack=1
       var selectedGroup = $('.selected-group');
       if (selectedGroup.length == 0) { // backing up from all groups to all sessions
         this.removeItemsByClass("session-group");
-        this.showSessions();
+  	//this.showHomePage()
+	this.showSessions();
         this.hideBackBtn();
       } else {
+	 whichBack=2
         // check for group evluation form
         var groupForm = $('.group-form');
         if (groupForm.length == 0) { // backing up from selected group to all groups
           selectedGroup.remove();
-          if (!(this.userRole in ROLES.ADMIN)) {
+	 whichBack=2.1
+          if (!this.isAdmin ) {
+	    whichBack=2.2
             this.hideBackBtn();
+
             this.showSessionGroups();
           } else {
-            var selectedSessionID = selectedGrpID.split('-')[0];
+           whichBack=2.3   
+	 var selectedSessionID = selectedGrpID.split('-')[0];
+        //showHomePage()     
+	//this.showSessions();
             this.showSessionGroups(selectedSessionID);
           }
         } else { // backing up from group evaluation form to students in selected group
           // ask for confirmation if unsaved changes are detected
           if (this.state.hasUnsavedChanges) {
+	    whichBack=3.1
             this.setWaitingOnSavePrompt(true);
             this.makeModal("confirm-save");
           } else {
+		 whichBack=3.2
             groupForm.remove();
             this.showStudsInGroup(selectedGrpID);
           }
-        }        
+        }
       }
     } else { // backing up from selected student to students in selected group
       // ask for confirmation if unsaved changes are detected
@@ -538,7 +678,8 @@ class TAHelperUI {
         this.showStudsInGroup(selectedGrpID);
       }
     }
-  }
+console.log(whichBack)  
+}
 
 
   /* Handles click event for save button */
@@ -606,7 +747,7 @@ class TAHelperUI {
     $('#content').trigger('request:group-eval', [this.userInfo.NetID, groupID]);
   }
 
-  /*  */
+  /* Handles loading page visibility */
   handleImageLoaded() {
     this.state.imagesLoaded++;
     if (this.state.imagesToLoad == this.state.imagesLoaded) {
@@ -615,8 +756,8 @@ class TAHelperUI {
       this.hideLoader();
     }
   }
-  
-  /*  */
+
+  /* Handles click even for modal submit button */
   handleModalSubmitRequest (modalType) {
     return new Promise((resolve, _) => {
       switch (modalType) {
@@ -632,20 +773,20 @@ class TAHelperUI {
           // prioritize select all options that are checked
           var checkedAll = $(`input[type=checkbox][name=section-all]:checked`);
           if (checkedAll.length > 0) {
-            if (this.userRole in ADMIN.ROLES) {
+            if (this.isAdmin) {
               $('#content').trigger(`request:${modalType}-eval`, ["all", null]);
             } else {
               $('#content').trigger(`request:${modalType}-eval`, ["mix", data]);
             }
             break;
           }
-  
+
           // find all modal options that are checked
           var checkedEvaluators = $(`input[type=checkbox][name=section-evaluator]:checked`);
           var checkedGroups = $(`input[type=checkbox][name*=section-session-group-]:not([id*=session]):checked`);
           // console.log(checkedEvaluators, checkedGroups)
           if (checkedEvaluators.length == 0 && checkedGroups.length == 0) { return; }
-  
+
           if (checkedEvaluators.length > 0) {
             let checkedAll = checkedEvaluators.filter((_, checked) => $(checked).attr("id").endsWith("-all"));
             if (checkedAll.length > 0) {
@@ -656,12 +797,12 @@ class TAHelperUI {
               data["Evaluators"] = Array.from(evaluators);
             }
           }
-  
+
           if (checkedGroups.length > 0) {
             var groups = checkedGroups.map((_, group) => $(group).attr("id").split('-option-')[1]);
             data["Groups"] = Array.from(groups);
           }
-  
+
           // notify TAHelper that a download or clear request has been made
           // console.log(data)
           $('#content').trigger(`request:${modalType}-eval`, ["mix", data]);
@@ -687,7 +828,7 @@ class TAHelperUI {
     });
   }
 
-  /*  */
+  /* Handles click event for modal cancel button */
   handleModalCancelRequest() {
     if (this.state.waitingOnSavePrompt) {
       this.setHasUnsavedChanges(false);
@@ -710,7 +851,7 @@ class TAHelperUI {
         switch (confirmType) {
           case "save":
             this.setWaitingOnSavePrompt(false);
-            break 
+            break
           case "clear":
             this.setWaitingOnClearPrompt(false);
             break
@@ -723,7 +864,7 @@ class TAHelperUI {
     }
   }
 
-  /*  */
+  /* Automatically selects/unselects related input groups for modal inputs */
   updateInputGroup (inputElem) {
     var optionClass = inputElem.getAttribute("class");
     var inputGroup = inputElem.name;
@@ -736,7 +877,7 @@ class TAHelperUI {
           let sessionIDs = Array.from(this.userInfo.Group, x => x.split('-')[0]);
           let uniqueSessionIDs = Array.from(new Set(sessionIDs));
           uniqueSessionIDs.map(sessionID => this.selectAll(`${inputGroup}-${sessionID}`, isChecked));
-          
+
           // show group options once checked at least once
           if (isChecked) {
             let sessionDivs = $(inputElem).parent().siblings().slice(1); // ignore header label
@@ -749,7 +890,7 @@ class TAHelperUI {
           this.selectAll(inputGroup, isChecked);
         }
         break
-      case "sub-option": 
+      case "sub-option":
         if (inputGroup.includes("session-group")) {
           // show group options once checked at least once
           let groupDivs = $(inputElem).siblings().slice(1);
@@ -826,9 +967,15 @@ class TAHelperUI {
       title: 'Clear responses in database',
       html: 'Clear Responses'
     }).click(evt => this.makeModal("clear"));
+    var importBtn = $('<button/>', {
+      id: 'show-log-button',
+      class: 'log-button',
+      title: 'Show last google sheet import Date',
+      html: 'Show Import Date'
+    }).click(evt => this.makeModal("import"));
 
-    if (this.userRole in ROLES.ADMIN) {
-      drpdwnMenu.append(downloadBtn, clearBtn);
+    if (this.isAdmin) {
+      drpdwnMenu.append(downloadBtn, clearBtn,importBtn);
     } else {
       drpdwnMenu.append(downloadBtn);
     }
@@ -837,16 +984,16 @@ class TAHelperUI {
     this.addToParentById('right-menu' /* parent container */, drpdwnMenu);
   }
 
-  /* */
+  /* Turns the loader visible or invisible  */
   showLoader() { $(".loader").fadeIn('fast'); }
   hideLoader() { $(".loader").fadeOut(); }
-  
-  /*  */
+
+  /* Shows or hides the group evaluation link */
   showGroupEvalLink() { $("group-evaluation-div").show(); }
   hideGroupEvalLink() { $("group-evaluation-div").hide(); }
 
   /* Notifies the user that there are no students in the selected group */
-  showNoStudLabel (groupID) { 
+  showNoStudLabel (groupID) {
     var noStudLabel = $('<label/>', {
       id: `no-students-label`,
       html: `No students in this group`

@@ -17,6 +17,10 @@ class TAHelperModel {
     return this.loginInfo.cn;
   }
 
+  getSectionInfo() {
+     return this.courseInfo["Section Info"];
+  }
+	
   /* Returns information on all of the evaluators in the course */
   getAllTAs() {
     return this.courseInfo["TA Groups"];

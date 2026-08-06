@@ -1,0 +1,17 @@
+# Python dependencies for the roster/photo pipeline.
+#
+#   makeJSON.py                 Google Sheet  -> json/data.json + templates.json
+#   extractStudentsFromHTML.py  saved SOLAR pages -> student photos
+#   makeSyntheticRoster.py      fake roster + placeholder photos (no credentials)
+#
+# Installed into the DDEV web image by .ddev/web-build/Dockerfile.python.
+# On the production host install with: pip3 install -r requirements.txt
+
+# --- makeJSON.py (Google Sheets API, service-account auth) ---
+google-api-python-client
+google-auth
+httplib2
+
+# --- extractStudentsFromHTML.py (scrape saved SOLAR pages, copy photos) ---
+beautifulsoup4
+Pillow

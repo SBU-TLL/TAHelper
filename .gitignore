@@ -11,3 +11,19 @@
 images/
 
 client_secret.json
+# editor swap files
+*.swp
+*.swo
+
+# --- generated roster data: NEVER commit ------------------------------------
+# Produced by makeJSON.py from the live Google Sheet and containing real
+# student names/netIDs. Local development uses makeSyntheticRoster.py instead;
+# .ddev provisions a synthetic data.json automatically on `ddev start`.
+/www/json/data.json
+/www/json/templates.json
+/www/json/log.json
+# Saved SOLAR pages and extracted photos (real student names + faces)
+/Temp/
+/*_files/
+/*.html
+no-image.png

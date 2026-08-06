@@ -1,0 +1,273 @@
+{
+    "Section Info": {
+        "Section": {
+            "1": "8:25AM-9:20AM",
+            "2": "9:30AM-10:25AM"
+        }
+    },
+    "Student Groups": {
+        "0a5442f5e191d8dce9b01a987c8f0433af9223f2cda460edc113f15ccda3a589": {
+            "GTAGroups": [],
+            "Group": "1-1",
+            "Name": "Tatum Hayes",
+            "NetID": "thayes12",
+            "SID": "0a5442f5e191d8dce9b01a987c8f0433af9223f2cda460edc113f15ccda3a589",
+            "Warning": ""
+        },
+        "0d159e2ea12b59436abc97c25652da5e37f39b991a2bc639b896a3c3ec77d74d": {
+            "GTAGroups": [],
+            "Group": "1-2",
+            "Name": "Devon Chen",
+            "NetID": "dchen19",
+            "SID": "0d159e2ea12b59436abc97c25652da5e37f39b991a2bc639b896a3c3ec77d74d",
+            "Warning": ""
+        },
+        "1f659a850d9762a3232dbc4e1995b53a0e5abc086c20b1354753bf3ccbd031a8": {
+            "GTAGroups": [],
+            "Group": "1-3",
+            "Name": "Reese Nakamura",
+            "NetID": "rnakamura14",
+            "SID": "1f659a850d9762a3232dbc4e1995b53a0e5abc086c20b1354753bf3ccbd031a8",
+            "Warning": ""
+        },
+        "2294ad2a26b531ff10b3d39a42d589c559348b798f3e9254728bed0b42f1970f": {
+            "GTAGroups": [],
+            "Group": "2-2",
+            "Name": "Quinn Adler",
+            "NetID": "qadler22",
+            "SID": "2294ad2a26b531ff10b3d39a42d589c559348b798f3e9254728bed0b42f1970f",
+            "Warning": ""
+        },
+        "2c1287b83dab526d535613d9cc0f00d07467a8f40f0e91567c7ff8b07cc70bf0": {
+            "GTAGroups": [],
+            "Group": "1-3",
+            "Name": "Emerson Silva",
+            "NetID": "esilva20",
+            "SID": "2c1287b83dab526d535613d9cc0f00d07467a8f40f0e91567c7ff8b07cc70bf0",
+            "Warning": ""
+        },
+        "34467bfcfa04978a72774cbef4df7dcbe99e747ef96b8c1738e85501df8477bc": {
+            "GTAGroups": [],
+            "Group": "1-1",
+            "Name": "Bailey Lombardi",
+            "NetID": "blombardi6",
+            "SID": "34467bfcfa04978a72774cbef4df7dcbe99e747ef96b8c1738e85501df8477bc",
+            "Warning": ""
+        },
+        "40d8d2683da223d9134decd6f665d1487d36c0ee30215f0133825333791685d5": {
+            "GTAGroups": [],
+            "Group": "2-3",
+            "Name": "Harper Silva",
+            "NetID": "hsilva23",
+            "SID": "40d8d2683da223d9134decd6f665d1487d36c0ee30215f0133825333791685d5",
+            "Warning": ""
+        },
+        "5c7b7c47478fca8716e0c758a0109fb16161a8678f709b4eec7cca79593821bf": {
+            "GTAGroups": [],
+            "Group": "2-2",
+            "Name": "Parker Silva",
+            "NetID": "psilva16",
+            "SID": "5c7b7c47478fca8716e0c758a0109fb16161a8678f709b4eec7cca79593821bf",
+            "Warning": ""
+        },
+        "5e2eed493bedda19d4dd44cc2748d48ea9192f34634fced1f8b1a78f45406a71": {
+            "GTAGroups": [],
+            "Group": "1-1",
+            "Name": "Emerson Adler",
+            "NetID": "eadler18",
+            "SID": "5e2eed493bedda19d4dd44cc2748d48ea9192f34634fced1f8b1a78f45406a71",
+            "Warning": ""
+        },
+        "60c83595a0af5ed32047e043ce9cab7d35c5fc807fc08ad1ed44b7f49fcd232f": {
+            "GTAGroups": [],
+            "Group": "2-1",
+            "Name": "Casey Farrow",
+            "NetID": "cfarrow15",
+            "SID": "60c83595a0af5ed32047e043ce9cab7d35c5fc807fc08ad1ed44b7f49fcd232f",
+            "Warning": ""
+        },
+        "63f16a49dee90dfc036cd0cdebc36d9683aadaa14c8488ff11497e6d944c76d7": {
+            "GTAGroups": [],
+            "Group": "2-3",
+            "Name": "Bailey Silva",
+            "NetID": "bsilva17",
+            "SID": "63f16a49dee90dfc036cd0cdebc36d9683aadaa14c8488ff11497e6d944c76d7",
+            "Warning": ""
+        },
+        "71246c1d1ac2dc1becd5d8e294bf929f1b7d497080391c41557411fbb0b4e870": {
+            "GTAGroups": [],
+            "Group": "2-2",
+            "Name": "Noor Tanaka",
+            "NetID": "ntanaka4",
+            "SID": "71246c1d1ac2dc1becd5d8e294bf929f1b7d497080391c41557411fbb0b4e870",
+            "Warning": ""
+        },
+        "89dddb6e16124383555dddc6e3e4d51bc7d97953783933be8f9f4fa9400dc63e": {
+            "GTAGroups": [],
+            "Group": "2-3",
+            "Name": "Gray Chen",
+            "NetID": "gchen11",
+            "SID": "89dddb6e16124383555dddc6e3e4d51bc7d97953783933be8f9f4fa9400dc63e",
+            "Warning": ""
+        },
+        "8b2210437010c3b0246adf3fa1d14546d725b676827194eb07e36d532357a042": {
+            "GTAGroups": [],
+            "Group": "1-1",
+            "Name": "Wren Tanaka",
+            "NetID": "wtanaka0",
+            "SID": "8b2210437010c3b0246adf3fa1d14546d725b676827194eb07e36d532357a042",
+            "Warning": ""
+        },
+        "93322f077876e2bf3ef8aab22a885de551073c250800d1210f07ccf8ada3a285": {
+            "GTAGroups": [],
+            "Group": "1-2",
+            "Name": "Yuki Farrow",
+            "NetID": "yfarrow7",
+            "SID": "93322f077876e2bf3ef8aab22a885de551073c250800d1210f07ccf8ada3a285",
+            "Warning": ""
+        },
+        "b03a68717f77e6b8fd608208aab2b4f0df3b5bd4c46e24aa81141b4fbbd2cb4f": {
+            "GTAGroups": [],
+            "Group": "1-3",
+            "Name": "Lennon Adler",
+            "NetID": "ladler8",
+            "SID": "b03a68717f77e6b8fd608208aab2b4f0df3b5bd4c46e24aa81141b4fbbd2cb4f",
+            "Warning": ""
+        },
+        "b3b5666e9fadc82faad663f5ae63309ebd87bb1e88e3d702719f32f0e79a1f98": {
+            "GTAGroups": [],
+            "Group": "2-1",
+            "Name": "Casey Brooks",
+            "NetID": "cbrooks21",
+            "SID": "b3b5666e9fadc82faad663f5ae63309ebd87bb1e88e3d702719f32f0e79a1f98",
+            "Warning": ""
+        },
+        "b4bfa48b2f729121ec26bf012ff7dae3d9c29c0743d74d1ce80f54621af39934": {
+            "GTAGroups": [],
+            "Group": "1-2",
+            "Name": "Devon Hayes",
+            "NetID": "dhayes1",
+            "SID": "b4bfa48b2f729121ec26bf012ff7dae3d9c29c0743d74d1ce80f54621af39934",
+            "Warning": ""
+        },
+        "c590c5c0305bbc16a05239473d8fedab7c86edfb59b707be6bc66613fcf259d6": {
+            "GTAGroups": [],
+            "Group": "2-1",
+            "Name": "Casey Tanaka",
+            "NetID": "ctanaka9",
+            "SID": "c590c5c0305bbc16a05239473d8fedab7c86edfb59b707be6bc66613fcf259d6",
+            "Warning": ""
+        },
+        "cd131fa03719102d696677951a913c9eb7397288f7dc4afed1d9ad5ae25743f8": {
+            "GTAGroups": [],
+            "Group": "2-3",
+            "Name": "Umber Farrow",
+            "NetID": "ufarrow5",
+            "SID": "cd131fa03719102d696677951a913c9eb7397288f7dc4afed1d9ad5ae25743f8",
+            "Warning": ""
+        },
+        "d522ada2b7cba90c2849ce9fc68fddb19bf668b9b3c70550a27743d67639a302": {
+            "GTAGroups": [],
+            "Group": "1-3",
+            "Name": "Jules Mensah",
+            "NetID": "jmensah2",
+            "SID": "d522ada2b7cba90c2849ce9fc68fddb19bf668b9b3c70550a27743d67639a302",
+            "Warning": ""
+        },
+        "d9608644877efe1fde4147d8a5453898570907c74cee2d867442bed7cf225004": {
+            "GTAGroups": [],
+            "Group": "2-1",
+            "Name": "Casey Hayes",
+            "NetID": "chayes3",
+            "SID": "d9608644877efe1fde4147d8a5453898570907c74cee2d867442bed7cf225004",
+            "Warning": ""
+        },
+        "e41316115e7e8e463efd2202478480668a0cdbaa9afb2309a8ab8ad8e7dddb5f": {
+            "GTAGroups": [],
+            "Group": "2-2",
+            "Name": "Kai Kowalski",
+            "NetID": "kkowalski10",
+            "SID": "e41316115e7e8e463efd2202478480668a0cdbaa9afb2309a8ab8ad8e7dddb5f",
+            "Warning": ""
+        },
+        "e5217fb02a0533a3ce670338f30b6a9c937a26466eee0f2973b26cbf3d29f086": {
+            "GTAGroups": [],
+            "Group": "1-2",
+            "Name": "Lennon Diaz",
+            "NetID": "ldiaz13",
+            "SID": "e5217fb02a0533a3ce670338f30b6a9c937a26466eee0f2973b26cbf3d29f086",
+            "Warning": ""
+        }
+    },
+    "TA Groups": {
+        "testadmin": {
+            "Evaluators": [],
+            "GTAGroups": [],
+            "Group": [
+                "1-1",
+                "1-2",
+                "1-3",
+                "2-1",
+                "2-2",
+                "2-3"
+            ],
+            "Name": "Test Admin",
+            "NetID": "testadmin",
+            "Type": "Professor"
+        },
+        "testprof": {
+            "Evaluators": [
+                {
+                    "Name": "Test GTA",
+                    "NetID": "testta"
+                },
+                {
+                    "Name": "Test Facilitator",
+                    "NetID": "teststudent"
+                }
+            ],
+            "GTAGroups": [],
+            "Group": [
+                "1-1",
+                "1-2",
+                "1-3",
+                "2-1",
+                "2-2",
+                "2-3"
+            ],
+            "Name": "Test Professor",
+            "NetID": "testprof",
+            "Type": "Professor"
+        },
+        "teststudent": {
+            "GTAGroups": [],
+            "Group": [
+                "1-1",
+                "1-2"
+            ],
+            "Name": "Test Facilitator",
+            "NetID": "teststudent",
+            "Type": "Group Facilitator"
+        },
+        "testta": {
+            "Evaluators": [
+                {
+                    "Name": "Test Facilitator",
+                    "NetID": "teststudent"
+                }
+            ],
+            "GTAGroups": [],
+            "Group": [
+                "1-1",
+                "1-2",
+                "1-3",
+                "2-1",
+                "2-2",
+                "2-3"
+            ],
+            "Name": "Test GTA",
+            "NetID": "testta",
+            "Type": "GTAs"
+        }
+    }
+}

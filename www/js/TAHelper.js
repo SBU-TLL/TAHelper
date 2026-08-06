@@ -19,8 +19,10 @@ class TAHelper {
       var user = this.model.getLoginID();
       var userInfo = this.model.getUserInfo(user);
       var studInfo = this.model.getAllStudsForUser(user);
-      this.ui = new TAHelperUI(userInfo, studInfo);
-      // console.log(this.model, this.ui)
+      var TAInfo= this.model.getAllTAs();
+      var sectionInfo=this.model.getSectionInfo();
+       console.log(TAInfo)
+       this.ui = new TAHelperUI(userInfo, studInfo,TAInfo,sectionInfo);
 
       this.ui.showHomePage().then(() => {
         this.ui.hideLoader();
