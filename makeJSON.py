@@ -121,7 +121,7 @@ try:
                         else:
                                 try:
                                         if allData[sheetName][key]["Type"] != i[header.index("Type")].strip():
-                                                alData[sheetName][key]["Hybrid"]=True
+                                                allData[sheetName][key]["Hybrid"]=True
                                 except:
                                         hybridNOP=True
                         session = i[header.index("Section")].strip()
