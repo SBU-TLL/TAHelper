@@ -1,7 +1,43 @@
 #!/bin/bash
 ## Description: Extract student photos from saved SOLAR pages (or --verify a roster)
 ## Usage: photos [--in DIR] [--out DIR] [--verify www/json/data.json]
-## Example: "ddev photos --verify www/json/data.json"
+## Example: "ddev photos --out ./out" | "ddev photos --verify www/json/data.json"
 ## ProjectTypes: php
 cd /var/www/html || exit 1
-python3 extractStudentsFromHTML.py "$@"
+
+# DDEV does not preserve quoting when it forwards arguments to a custom command:
+#   ddev photos --in "./Bio 354 Fall 2026"
+# arrives here as five separate arguments (--in, ./Bio, 354, Fall, 2026).
+# Reassemble anything between one --flag and the next into a single value, so
+# paths containing spaces survive.
+args=()
+current=""
+have_current=0
+
+flush() {
+    if [ "$have_current" = 1 ]; then
+        args+=("$current")
+        have_current=0
+        current=""
+    fi
+}
+
+for token in "$@"; do
+    case "$token" in
+        --*)
+            flush
+            args+=("$token")
+            ;;
+        *)
+            if [ "$have_current" = 1 ]; then
+                current="$current $token"
+            else
+                current="$token"
+                have_current=1
+            fi
+            ;;
+    esac
+done
+flush
+
+python3 extractStudentsFromHTML.py "${args[@]}"
