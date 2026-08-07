@@ -56,15 +56,16 @@ fi
 # to .gitignore) could still stage them. This hook blocks that, and blocks the
 # service-account credentials outright.
 HOOK="$REPO/.git/hooks/pre-commit"
-if [ -d "$REPO/.git/hooks" ] && [ ! -e "$HOOK" ]; then
-    cat > "$HOOK" <<'HOOKEOF'
+MARKER="Installed by .ddev/tahelper/provision.sh"
+WANT=$(mktemp)
+cat > "$WANT" <<'HOOKEOF'
 #!/bin/sh
 # Installed by .ddev/tahelper/provision.sh — blocks committing real student data.
 # --diff-filter=ACM: only files being ADDED or MODIFIED. Removing these paths
 # from tracking (a deletion) is exactly what we want people to be able to do.
 blocked=$(git diff --cached --name-only --diff-filter=ACM | grep -E \
   -e '^(www/json/(data|templates|log)\.json|client_secret\.json)$' \
-  -e '(^|/)(Temp|out)/' \
+  -e '(^|/)(Temp|out|sheet-dump)/' \
   -e '_files/' \
   -e 'SA_LEARNING_MANAGEMENT' \
   -e ',[0-9a-f]{64}\.(jpg|jpeg|png|JPG)$' || true)
@@ -78,6 +79,20 @@ if [ -n "$blocked" ]; then
     exit 1
 fi
 HOOKEOF
-    chmod +x "$HOOK"
-    echo "tahelper: installed pre-commit guard against committing real roster data"
+
+# Install it, and keep it current: an existing hook that WE wrote gets refreshed
+# when the guard changes (a clone set up before a new data type existed would
+# otherwise keep an outdated guard forever). A hook somebody else wrote is left
+# strictly alone.
+if [ -d "$REPO/.git/hooks" ]; then
+    if [ ! -e "$HOOK" ]; then
+        cp "$WANT" "$HOOK"
+        chmod +x "$HOOK"
+        echo "tahelper: installed pre-commit guard against committing real roster data"
+    elif grep -qF "$MARKER" "$HOOK" && ! cmp -s "$WANT" "$HOOK"; then
+        cp "$WANT" "$HOOK"
+        chmod +x "$HOOK"
+        echo "tahelper: updated pre-commit guard against committing real roster data"
+    fi
 fi
+rm -f "$WANT"

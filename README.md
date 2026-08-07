@@ -47,6 +47,7 @@ Nothing existing is overwritten, so your local edits survive restarts.
 ddev roster                     # regenerate the synthetic roster + photos
 ddev roster --students 60 --sections 3
 ddev photos --verify www/json/data.json   # check photo filenames match a roster
+ddev sheet-dump BIO354 --list   # what is actually in the course spreadsheet?
 ddev roster-real BIO201         # import the REAL roster (staff only — see below)
 ```
 
@@ -76,7 +77,19 @@ Google service-account key) and drop it in the **repo root**, next to
 `makeJSON.py`. It is gitignored. Without it the import stops with a message
 telling you to use the synthetic generator instead.
 
-**2. Import the roster.**
+**2. Look at the spreadsheet first.** The import transforms the sheet on the way
+in, so if the result looks wrong you cannot tell whether the script or the sheet
+is at fault. `dumpSheet.py` downloads the workbook untouched:
+
+```bash
+ddev sheet-dump BIO354 --list     # tab names + row counts, writes nothing
+ddev sheet-dump BIO354            # every tab -> sheet-dump/BIO354/*.csv
+```
+
+Open the CSVs in Excel/Numbers. This is also how you check the sheet without a
+Google account that has access to it — only the service account needs access.
+
+**3. Import the roster.**
 
 ```bash
 ddev roster-real BIO201        # or BIO354
@@ -90,7 +103,7 @@ for per-tab detail.
 Both the roster *and* the questionnaires come from the spreadsheet, so this is
 also how you pick up edited questions.
 
-**3. Get the photos.** These cannot be fetched automatically — see
+**4. Get the photos.** These cannot be fetched automatically — see
 [`extractStudentsFromHTML.py`](#extractstudentsfromhtmlpy--student-photos)
 below. Save the SOLAR roster pages, then:
 
@@ -102,10 +115,11 @@ ddev photos --verify www/json/data.json     # who would have no photo?
 Copy the resulting `{Name},{hash}.jpg` files into the course's images directory
 (`www/images`, which is a symlink into the userData storage).
 
-**4. When you're done**, get the real data off your machine:
+**5. When you're done**, get the real data off your machine:
 
 ```bash
 ddev roster                    # restores the synthetic roster
+rm -rf sheet-dump/             # and any spreadsheet dumps
 ```
 
 > ⚠️ While a real import is in place, your working copy holds real student
@@ -164,6 +178,37 @@ host is unaffected:
 It exits with a clear message if the credentials are absent, pointing at the
 synthetic generator instead.
 
+### `dumpSheet.py` — look at the spreadsheet (**reads real student data**)
+
+```bash
+python3 dumpSheet.py BIO354 --list                        # inventory only
+python3 dumpSheet.py BIO354                               # dump every tab to CSV
+python3 dumpSheet.py BIO354 --photos ./solar-pages/out    # why don't they match?
+```
+
+Downloads the workbook verbatim — **every** tab, including ones `makeJSON.py`
+ignores (marked in the listing), plus the title and when it was last edited. Use
+it when a roster looks wrong, or when you have no Google account with access to
+the sheet. Uses the same `client_secret.json` and `TAHELPER_SHEET_ID` /
+`TAHELPER_CREDENTIALS` overrides as `makeJSON.py`, and reads the course →
+spreadsheet map straight out of `makeJSON.py`, so there is only one such map.
+
+`--photos DIR` diagnoses a roster that doesn't line up with the extracted
+photos, **without** having to generate a roster first. The two halves of the
+pipeline join on `sha256(Student ID)`, so it hashes the sheet's Student ID
+column and compares against the `{Name},{sha256}.jpg` files, by hash *and* by
+name. That separates the two possible causes:
+
+| hash match | name match | meaning |
+|---|---|---|
+| 0 | 0 | different cohorts — the sheet isn't this term's roster |
+| 0 | high | right people, wrong identifier — the sheet's `Student ID` isn't SOLAR's 9-digit EMPLID |
+
+The CSVs contain names, netIDs and **raw** student IDs. They are written to
+`sheet-dump/` (gitignored, mode 0600, blocked by the pre-commit hook) — delete
+them when you are done. Only counts and masked samples go to stdout, so
+redirecting the output cannot create a file full of student rows.
+
 ### `extractStudentsFromHTML.py` — student photos
 
 ```bash
@@ -212,6 +257,7 @@ www/                     web root (docroot)
   json/                  roster + questionnaires (generated, gitignored)
   studentResponses/ groupResponses/ images/   → symlinks to userData storage
 makeJSON.py  extractStudentsFromHTML.py  makeSyntheticRoster.py   pipeline
+dumpSheet.py             download the spreadsheet as CSV to inspect it
 requirements.txt         python deps (installed into the DDEV web image)
 ```
 
