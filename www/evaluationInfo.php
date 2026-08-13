@@ -1,7 +1,10 @@
 <?php
 $type = $_GET["type"];
 $date = $_GET["date"];
-$filename = $_GET["filename"];
+// SECURITY: $filename builds the read/write path (file_get_contents / file_put_contents
+// below). Sanitize to prevent path traversal / arbitrary file write — strip directory
+// components and allow only safe filename characters.
+$filename = preg_replace('/[^A-Za-z0-9_\-]/', '', basename($_GET["filename"] ?? ''));
 $fn_arr = explode("_", $filename);
 
 // $date = $fn_arr[0];

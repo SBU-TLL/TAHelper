@@ -1,0 +1,23 @@
+#!/bin/bash
+## Description: Import the REAL roster from Google Sheets (needs client_secret.json)
+## Usage: roster-real <COURSE>
+## Example: "ddev roster-real BIO201"
+## ProjectTypes: php
+if [ -z "${1:-}" ]; then echo "usage: ddev roster-real <COURSE>   e.g. BIO201"; exit 1; fi
+cd /var/www/html || exit 1
+
+echo "Importing the REAL roster for $1 into www/json/ (real student data)."
+echo "This WRITES FILES; the output below is only a log — do not redirect it to"
+echo "a .json file. Run 'ddev roster' to go back to the synthetic roster."
+echo
+
+# Write into the local docroot instead of the production path.
+TAHELPER_JSON_DIR=/var/www/html/www/json python3 makeJSON.py "$1" || exit 1
+
+echo
+python3 - <<'PY'
+import json
+d = json.load(open('/var/www/html/www/json/data.json'))
+print(f"Roster now in www/json/data.json: {len(d['Student Groups'])} students, "
+      f"{len(d['TA Groups'])} staff (gitignored; the pre-commit hook blocks committing it).")
+PY

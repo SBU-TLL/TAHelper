@@ -1,0 +1,22 @@
+# DDEV-only: make the roster/photo pipeline runnable inside the web container.
+#
+# The image already ships python3, but not pip and none of the libraries the
+# scripts import. Installing at image-build time (rather than in a start hook)
+# means it happens once and survives restarts.
+#
+# NOTE: the build context here is .ddev/web-build/, so the repo's
+# requirements.txt is not reachable at build time — the list below mirrors it.
+# Keep the two in sync (requirements.txt is the canonical list for production).
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+       python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Debian marks the system Python "externally managed"; this is a disposable dev
+# container, so installing into it directly is fine.
+RUN pip3 install --no-cache-dir --break-system-packages \
+        google-api-python-client \
+        google-auth \
+        httplib2 \
+        beautifulsoup4 \
+        Pillow

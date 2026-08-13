@@ -1,0 +1,8 @@
+#!/bin/bash
+## Description: Regenerate the SYNTHETIC local roster + placeholder photos
+## Usage: roster [flags]
+## Example: "ddev roster" | "ddev roster --students 60 --sections 3"
+## ProjectTypes: php
+cd /var/www/html || exit 1
+python3 makeSyntheticRoster.py --force \
+  --image-dir /var/www/userData/TAHelper/BIO201/images "$@"

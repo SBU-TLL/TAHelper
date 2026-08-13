@@ -1,0 +1,10 @@
+# DDEV-only: provision the env-supplied (gitignored) files on start, so a fresh
+# clone works — iam.php, the Shibboleth .htaccess gate, the dev roster
+# (dataDev.json) and the runtime response dirs. Never overwrites existing files.
+#
+# The work happens in a script rather than inline: a DDEV `exec` hook is not run
+# through a login shell, so shell builtins (`cd`) and multi-line blocks fail with
+# "error while trying to execute ...". Calling bash explicitly is reliable.
+hooks:
+  post-start:
+    - exec: "bash /mnt/ddev_config/tahelper/provision.sh"
