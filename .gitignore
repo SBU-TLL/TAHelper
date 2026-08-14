@@ -20,6 +20,13 @@ client_secret.json
 *.swo
 __pycache__/
 
+# --- course data: NEVER commit ----------------------------------------------
+# Rosters, student photos and saved evaluations for every course. This lives
+# inside the repo, so git has to be told about all of it: everything under
+# data/ is ignored except the note explaining what belongs there.
+/data/*
+!/data/README.md
+
 # --- generated roster data: NEVER commit ------------------------------------
 # Produced by makeJSON.py from the live Google Sheet and containing real
 # student names/netIDs. Local development uses makeSyntheticRoster.py instead;

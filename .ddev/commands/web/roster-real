@@ -7,12 +7,14 @@ if [ -z "${1:-}" ]; then
     echo "usage: ddev roster-real <COURSE>       e.g. ddev roster-real BIO354"
     echo "installed courses:"
     for d in /var/www/html/www/*/; do
-        [ -f "$d/index.php" ] && [ -L "$d/json" ] && basename "$d" | sed 's/^/  /'
+        [ -f "$d/index.php" ] && basename "$d" | sed 's/^/  /'
     done
     exit 1
 fi
 COURSE="$1"
-DATA="/var/www/html/userData/TAHelper/$COURSE"
+
+DATA="/var/www/html/data/$COURSE"
+
 if [ ! -d "$DATA" ]; then echo "no such course: $COURSE"; exit 1; fi
 cd /var/www/html || exit 1
 

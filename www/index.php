@@ -4,16 +4,15 @@
  *
  * One deployment serves several courses, each from its own directory:
  *   /BIO201/   /BIO354/   …
- * They share all the code; what differs is the data behind each one. A directory
- * counts as a course when it holds an index.php and has a matching data/<COURSE>
- * directory outside the web root, so adding a course needs no edit here.
+ * They share all the code; what differs is the data behind each one. Any
+ * directory here holding an index.php is a course, so adding one needs no edit
+ * here. Its data lives in data/<COURSE>/, outside this web root.
  *
  * With exactly one course installed there is nothing to choose — go straight in.
  */
 $courses = [];
-$dataRoot = dirname(__DIR__) . '/data';
 foreach (glob(__DIR__ . '/*', GLOB_ONLYDIR) as $dir) {
-    if (is_file("$dir/index.php") && is_dir("$dataRoot/" . basename($dir))) {
+    if (is_file("$dir/index.php")) {
         $courses[] = basename($dir);
     }
 }

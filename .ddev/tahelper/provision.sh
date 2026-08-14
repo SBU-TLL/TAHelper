@@ -2,9 +2,10 @@
 # DDEV-only: make a fresh clone runnable WITHOUT any real student data.
 #
 # One deployment serves several courses, each from its own directory under the
-# web root (www/BIO201/, www/BIO354/, …) whose json/, images/, studentResponses/
-# and groupResponses/ are symlinks into ../../../userData/TAHelper/<COURSE>/.
-# That storage lives outside the repo, so no course data is ever near git.
+# web root (www/BIO201/, www/BIO354/, …). Their data lives in data/<COURSE>/ at
+# the repo root — inside the repository but OUTSIDE the web root, so it is never
+# served over HTTP. Everything under data/ is gitignored and the pre-commit hook
+# below refuses it, because it is real student data sitting in a git checkout.
 #
 # Provisions the files the app needs but git deliberately does not carry:
 #   www/.htaccess                - the Shibboleth session gate
@@ -21,13 +22,15 @@ set -u
 SRC=/mnt/ddev_config/tahelper   # .ddev/ is mounted here inside the web container
 APP=/var/www/html/www
 REPO=/var/www/html
-STORAGE=/var/www/userData/TAHelper
+STORAGE=/var/www/html/data
 
 # Courses are discovered from the web root rather than listed here, so adding
 # www/<COURSE>/ to the repo is all it takes.
+# A course IS its code directory; its data directory is created below if absent,
+# so a fresh clone (which carries no data at all) still provisions correctly.
 COURSES=$(cd "$APP" && for d in */; do
     d=${d%/}
-    [ -f "$d/index.php" ] && [ -d "$REPO/data/$d" ] && echo "$d"
+    [ -f "$d/index.php" ] && echo "$d"
 done)
 
 install_if_missing() {
@@ -83,8 +86,10 @@ cat > "$WANT" <<'HOOKEOF'
 # Installed by .ddev/tahelper/provision.sh — blocks committing real student data.
 # --diff-filter=ACM: only files being ADDED or MODIFIED. Removing these paths
 # from tracking (a deletion) is exactly what we want people to be able to do.
-blocked=$(git diff --cached --name-only --diff-filter=ACM | grep -E \
-  -e '^(www/json/(data|templates|log)\.json|client_secret\.json)$' \
+blocked=$(git diff --cached --name-only --diff-filter=ACM \
+  | grep -vE '^data/README\.md$' \
+  | grep -E \
+  -e '^(data/|client_secret\.json$)' \
   -e '(^|/)(Temp|out|sheet-dump)/' \
   -e '_files/' \
   -e 'SA_LEARNING_MANAGEMENT' \

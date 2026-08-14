@@ -16,7 +16,7 @@
  * defined here plus a matching roster row is how you exercise a real roster.
  *
  * Local testing only: the IdP ships with the DDEV add-on and never runs in
- * production, and the roster row lives in local storage outside the repo.
+ * production, and the roster row lives under data/, which is gitignored.
  */
 return [
     'yournetid:yournetidpass' => [
