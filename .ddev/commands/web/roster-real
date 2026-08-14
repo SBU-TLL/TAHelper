@@ -12,7 +12,7 @@ if [ -z "${1:-}" ]; then
     exit 1
 fi
 COURSE="$1"
-DATA="/var/www/userData/TAHelper/$COURSE"
+DATA="/var/www/html/userData/TAHelper/$COURSE"
 if [ ! -d "$DATA" ]; then echo "no such course: $COURSE"; exit 1; fi
 cd /var/www/html || exit 1
 
