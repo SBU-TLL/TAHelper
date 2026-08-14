@@ -53,7 +53,7 @@ local edits — and a real roster you have imported — survive restarts.
 ```bash
 ddev roster BIO201                        # regenerate that course's synthetic roster
 ddev roster BIO201 --students 60 --sections 3
-ddev photos --verify data/BIO354/json/data.json   # do photo names match a roster?
+ddev photos --course BIO354               # does this course have all its photos?
 ddev sheet-dump BIO354 --list             # what is in the course spreadsheet?
 ddev roster-real BIO354                   # import the REAL roster (staff — see below)
 ddev add-test-ta BIO354 ta_netid ta_name    # a login that can reach a REAL roster
@@ -122,7 +122,7 @@ below. Save the SOLAR roster pages, then:
 
 ```bash
 ddev photos --in ./solar-pages --out data/BIO354/images   # straight into storage
-ddev photos --verify data/BIO354/json/data.json   # who would have no photo?
+ddev photos --course BIO354                               # who has no photo?
 ```
 
 `--out data/<COURSE>/images` writes straight through that course's symlink into
@@ -226,7 +226,8 @@ redirecting the output cannot create a file full of student rows.
 
 ```bash
 python3 extractStudentsFromHTML.py --in ./saved-solar --out ./Temp
-python3 extractStudentsFromHTML.py --verify data/BIO354/json/data.json
+python3 extractStudentsFromHTML.py --verify data/BIO354/json/data.json \
+                                   --images data/BIO354/images
 ```
 
 Input is SOLAR class-roster pages **saved to disk** (each `<name>.html` plus its
@@ -242,10 +243,22 @@ Note also that `makeJSON.py` **writes files**; its stdout is only a log. Piping
 it to a `.json` file does not produce a roster — and the file would contain raw
 student data.
 
-`--verify` compares generated filenames against a roster and reports students
-who would have no photo — worth running after any import, because a mismatch is
-otherwise silent. The usual cause is name formatting: `makeJSON.py` builds
-`"First Last"` from the sheet, while SOLAR's `MAIN_SNAME` is often `"Last,First"`.
+There are two different questions here, and they need different flags:
+
+| Question | Command |
+|---|---|
+| Does this course have the photos it needs **right now**? | `ddev photos --course BIO354` |
+| Would extracting my saved SOLAR pages produce the right names? | `ddev photos --verify data/BIO354/json/data.json` |
+
+`--verify` on its own compares the roster against what the **saved SOLAR pages**
+under `--in` would produce — it never looks at a course's installed `images/`, so
+in a multi-course checkout it happily compares one course's roster against
+another course's export and reports everything missing. `--course` (or
+`--verify … --images …`) compares against what is actually installed.
+
+Either way, a mismatch is otherwise silent, so run one after any import. The
+usual cause is name formatting: `makeJSON.py` builds `"First Last"` from the
+sheet, while SOLAR's `MAIN_SNAME` is often `"Last,First"`.
 
 ### `makeSyntheticRoster.py` — fake data for development
 

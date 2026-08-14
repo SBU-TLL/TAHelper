@@ -1,13 +1,13 @@
 #!/bin/bash
 ## Description: Add a test staff row + IdP login for local testing (dev only)
 ## Usage: add-test-ta <COURSE> <netid> <name...> [--type ROLE] [--password PW]
-## Example: "ddev add-test-ta BIO354 faridnet farid"
+## Example: "ddev add-test-ta BIO354 sampleta Sample TA"
 ## ProjectTypes: php
 ## HostWorkingDir: true
 
 if [ -z "${2:-}" ]; then
     echo "usage: ddev add-test-ta <COURSE> <netid> <name...> [--type ROLE] [--password PW]"
-    echo "example: ddev add-test-ta BIO354 faridnet farid"
+    echo "example: ddev add-test-ta BIO354 sampleta Sample TA"
     exit 1
 fi
 

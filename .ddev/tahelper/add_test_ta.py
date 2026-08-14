@@ -93,7 +93,7 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("course")
     ap.add_argument("netid")
-    ap.add_argument("name", nargs="+", help="display name, e.g. farid")
+    ap.add_argument("name", nargs="+", help="display name, e.g. Sample TA")
     ap.add_argument("--type", dest="role", default="GTAs", choices=ROLES)
     ap.add_argument("--storage", default="/var/www/html/data")
     ap.add_argument("--password", help="IdP password (default: <netid>pass)")

@@ -1,8 +1,8 @@
 #!/bin/bash
 ## Description: Extract student photos from saved SOLAR pages (or --verify a roster)
-## Usage: photos [--in DIR] [--out DIR] [--verify data/<COURSE>/json/data.json]
+## Usage: photos [--course C] [--in DIR] [--out DIR] [--verify ROSTER] [--images DIR]
+## Example: "ddev photos --course BIO354"          (does this course have its photos?)
 ## Example: "ddev photos --in ./solar-pages --out data/BIO354/images"
-## Example: "ddev photos --verify data/BIO354/json/data.json"
 ## ProjectTypes: php
 cd /var/www/html || exit 1
 
@@ -41,4 +41,29 @@ for token in "$@"; do
 done
 flush
 
-python3 extractStudentsFromHTML.py "${args[@]}"
+# --course C is shorthand for "check the photos course C actually has":
+#   --verify data/C/json/data.json --images data/C/images
+# Without it, --verify compares the roster against what the saved SOLAR pages
+# would produce, which is a different question and ignores what is installed.
+final=()
+i=0
+while [ $i -lt ${#args[@]} ]; do
+    if [ "${args[$i]}" = "--course" ]; then
+        C="${args[$((i+1))]}"
+        if [ -z "$C" ] || [ ! -d "/var/www/html/data/$C" ]; then
+            echo "no such course: ${C:-<missing>}"
+            echo "installed courses:"
+            for d in /var/www/html/www/*/; do
+                [ -f "$d/index.php" ] && basename "$d" | sed 's/^/  /'
+            done
+            exit 1
+        fi
+        final+=(--verify "data/$C/json/data.json" --images "data/$C/images")
+        i=$((i+2))
+    else
+        final+=("${args[$i]}")
+        i=$((i+1))
+    fi
+done
+
+python3 extractStudentsFromHTML.py "${final[@]}"

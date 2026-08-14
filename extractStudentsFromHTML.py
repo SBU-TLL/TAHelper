@@ -14,9 +14,13 @@ student ID to the browser.
 Usage:
     python3 extractStudentsFromHTML.py                       # ./ -> ./Temp
     python3 extractStudentsFromHTML.py --in DIR --out DIR
-    python3 extractStudentsFromHTML.py --verify www/json/data.json
-        ^ don't copy anything; just report which roster students would get a
-          photo and which would silently show a broken image.
+    python3 extractStudentsFromHTML.py --verify data/<COURSE>/json/data.json
+        ^ don't copy anything; report which roster students WOULD get a photo
+          if the saved SOLAR pages were extracted.
+    python3 extractStudentsFromHTML.py --verify data/<COURSE>/json/data.json \
+                                       --images data/<COURSE>/images
+        ^ instead compare against the photos that course ALREADY has, which is
+          what you want when asking "is this course missing any photos?".
 """
 import argparse
 import glob
@@ -29,6 +33,8 @@ import shutil
 from bs4 import BeautifulSoup
 
 ROSTER_PAGE = "SA_LEARNING_MANAGEMENT.SS_FACULTY.html"
+# The "{Name},{sha256}.jpg" convention the app requests and this script emits.
+PHOTO_NAME_RE = re.compile(r",[0-9a-f]{64}\.(?:jpg|jpeg|png)$", re.IGNORECASE)
 BLANK_IMAGE = "no-image.png"
 
 
@@ -64,6 +70,9 @@ def find_roster_pages(in_dir: str):
 
 def scrape(in_dir: str):
     """Yield (name, student_id, photo_path) for every student found."""
+    if not os.path.isdir(in_dir):
+        raise SystemExit(f"No such directory: {os.path.abspath(in_dir)}\n"
+                         "Point --in at the folder holding your saved SOLAR pages.")
     blank = os.path.join(in_dir, BLANK_IMAGE)
     if not os.path.exists(blank):
         make_blank_image(blank)
@@ -104,12 +113,21 @@ def main():
                     help="where photos are written (default: Temp)")
     ap.add_argument("--verify", metavar="DATA_JSON", default=None,
                     help="compare against a roster instead of copying photos")
+    ap.add_argument("--images", metavar="DIR", default=None,
+                    help="verify against the photos ALREADY in DIR, rather than "
+                         "against what the saved SOLAR pages would produce")
     args = ap.parse_args()
 
-    found = list(scrape(args.in_dir))
-    print(f"found {len(found)} students in {os.path.abspath(args.in_dir)}")
+    # With --images the photo side comes from files already on disk, so there is
+    # nothing to scrape. Without it, the comparison is against what an extraction
+    # from the saved SOLAR pages under --in would produce.
+    if args.verify and args.images:
+        found = []
+    else:
+        found = list(scrape(args.in_dir))
+        print(f"found {len(found)} students in {os.path.abspath(args.in_dir)}")
 
-    if not found:
+    if not found and not (args.verify and args.images):
         print(
             "\n  No saved SOLAR pages here. This script does NOT log in to SOLAR —\n"
             "  it reads pages you have already saved to disk:\n"
@@ -137,11 +155,22 @@ def main():
                 "(e.g. www/json/data.json).")
         # roster is keyed by the hash; the app asks for "{Name},{SID}.jpg"
         expected = {f"{s['Name']},{s['SID']}.jpg" for s in roster.values()}
-        produced = {f"{name},{hash_sid(sid)}.jpg" for name, sid, _ in found}
+
+        if args.images:
+            # What this course actually has on disk right now.
+            if not os.path.isdir(args.images):
+                raise SystemExit(f"No such images directory: {args.images}")
+            produced = {f for f in os.listdir(args.images)
+                        if PHOTO_NAME_RE.search(f)}
+            label, where = "photos installed", os.path.abspath(args.images)
+        else:
+            produced = {f"{name},{hash_sid(sid)}.jpg" for name, sid, _ in found}
+            label, where = "photos produced ", "the saved SOLAR pages"
 
         matched = expected & produced
-        print(f"\n  roster students : {len(expected)}")
-        print(f"  photos produced : {len(produced)}")
+        print(f"\n  comparing against: {where}")
+        print(f"  roster students : {len(expected)}")
+        print(f"  {label}: {len(produced)}")
         print(f"  MATCHED         : {len(matched)}")
         missing = sorted(expected - produced)
         extra = sorted(produced - expected)
