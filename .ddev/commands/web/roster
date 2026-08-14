@@ -1,8 +1,20 @@
 #!/bin/bash
-## Description: Regenerate the SYNTHETIC local roster + placeholder photos
-## Usage: roster [flags]
-## Example: "ddev roster" | "ddev roster --students 60 --sections 3"
+## Description: Regenerate a course's SYNTHETIC roster + placeholder photos
+## Usage: roster <COURSE> [flags]
+## Example: "ddev roster BIO201" | "ddev roster BIO354 --students 60 --sections 3"
 ## ProjectTypes: php
+if [ -z "${1:-}" ]; then
+    echo "usage: ddev roster <COURSE> [flags]      e.g. ddev roster BIO201"
+    echo "installed courses:"
+    for d in /var/www/html/www/*/; do
+        [ -f "$d/index.php" ] && [ -L "$d/json" ] && basename "$d" | sed 's/^/  /'
+    done
+    exit 1
+fi
+COURSE="$1"; shift
+DATA="/var/www/userData/TAHelper/$COURSE"
+if [ ! -d "$DATA" ]; then echo "no such course: $COURSE"; exit 1; fi
 cd /var/www/html || exit 1
+
 python3 makeSyntheticRoster.py --force \
-  --image-dir /var/www/userData/TAHelper/BIO201/images "$@"
+  --out-dir "$DATA/json" --image-dir "$DATA/images" "$@"

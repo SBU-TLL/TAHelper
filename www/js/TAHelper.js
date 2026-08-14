@@ -2,16 +2,19 @@
 
 class TAHelper {
   constructor (courseInfo, loginInfo) {
-    this.courseInfo = courseInfo[0];
-    this.loginInfo = loginInfo[0];
+    // Both are plain objects now: the roster is unwrapped by the caller and the
+    // identity comes from the page rather than a second HTTP request.
+    this.courseInfo = courseInfo;
+    this.loginInfo = loginInfo;
     // console.log(this.courseInfo, this.loginInfo)
   }
 
 
   load() {
-    // load model and gui scripts
-    var model = $.get("./js/TAHelperModel.js");
-    var ui = $.get("./js/TAHelperUI.js");
+    // load model and gui scripts — absolute, because the code is shared by
+    // every course while the page lives under /<COURSE>/
+    var model = $.get("/js/TAHelperModel.js");
+    var ui = $.get("/js/TAHelperUI.js");
 
     $.when(model, ui).done(() => {
       this.model = new TAHelperModel(this.courseInfo, this.loginInfo);
@@ -111,7 +114,9 @@ class TAHelper {
       var hiddenElement = document.createElement('a');
       hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(result);
       hiddenElement.target = '_blank';
-      hiddenElement.download = 'BIO201 Evaluations.csv';
+      // Name the export after the course actually being viewed; this was
+      // hardcoded to BIO201, so every course exported under that name.
+      hiddenElement.download = `${window.TAHELPER_COURSE || 'TAHelper'} Evaluations.csv`;
       hiddenElement.click();
       console.log("done")
     });

@@ -1,4 +1,11 @@
 <?php
+/**
+ * Shared implementation — one copy serves every course.
+ *
+ * Reached only through a course entry point (www/<COURSE>/evaluationInfo.php),
+ * which sets up $TAHELPER_DATA (that course's data directory, outside the web
+ * root) and checks that the caller is on that course's staff list.
+ */
 $type = $_GET["type"];
 $date = $_GET["date"];
 // SECURITY: $filename builds the read/write path (file_get_contents / file_put_contents
@@ -17,7 +24,7 @@ if ($type == "student") {
 // $datenum = strtotime($date);
 // print($datenum);
 
-$template_file = "json/templates.json";
+$template_file = "$TAHELPER_DATA/json/templates.json";
 if (file_exists($template_file)) {
   $json_template = file_get_contents($template_file);
   $decoded_template = json_decode($json_template, true);
@@ -28,10 +35,10 @@ if (file_exists($template_file)) {
 }
 
 if ($type == "student") { /* Student Evaluation */
-  $form_url = "studentResponses/$filename.json";
+  $form_url = "$TAHELPER_DATA/studentResponses/$filename.json";
   $template = $decoded_template["Student Evaluation"];
 } else {  /* Group Evaluation */
-  $form_url = "groupResponses/$filename.json";
+  $form_url = "$TAHELPER_DATA/groupResponses/$filename.json";
   $template = $decoded_template["Group Evaluation"];
 }
 

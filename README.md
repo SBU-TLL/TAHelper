@@ -7,6 +7,11 @@ TAs sign in, drill down **Session → Group → Student**, and fill in a short
 questionnaire per student (and per group). Responses are stored as one JSON file
 per evaluation and can be exported to CSV.
 
+**One deployment serves several courses.** Each course is a directory under the
+web root — `/BIO201/`, `/BIO354/` — and they share all of the code. What differs
+is the data each directory's symlinks point at, so a course cannot see another
+course's roster, photos or responses. The bare URL lists the courses.
+
 ---
 
 ## Local development
@@ -25,7 +30,8 @@ Open the printed URL and sign in with one of the bundled test accounts
 | `student` / `studentpass` | Group Facilitator | straight to their own groups |
 
 **No real student data is involved.** `ddev start` provisions a *synthetic*
-roster (24 invented students, placeholder photos). See "Student data" below.
+roster per course (24 invented students, placeholder photos). See "Student data"
+below.
 
 ### What `ddev start` provisions
 
@@ -33,23 +39,28 @@ These files are intentionally **not** in git — each environment supplies its o
 
 | File | Provisioned from |
 |---|---|
-| `www/iam.php` | `.ddev/tahelper/iam-template.php` (production ships a real one) |
 | `www/.htaccess` | `.ddev/tahelper/htaccess` (the Shibboleth gate) |
-| `www/json/data.json` | `.ddev/tahelper/data.sample.json` (**synthetic** roster) |
-| `www/json/templates.json` | `.ddev/tahelper/templates.sample.json` |
-| placeholder photos | generated into the `images/` storage dir |
+| `data/<COURSE>/json/data.json` | `.ddev/tahelper/data.sample.json` (**synthetic** roster) |
+| `data/<COURSE>/json/templates.json` | `.ddev/tahelper/templates.sample.json` |
+| placeholder photos | generated into that course's `images/` storage dir |
 
-Nothing existing is overwritten, so your local edits survive restarts.
+Courses are discovered, not listed: any `www/<COURSE>/` with a matching
+`data/<COURSE>/` is provisioned. Nothing existing is overwritten, so your
+local edits — and a real roster you have imported — survive restarts.
 
 ### Handy commands
 
 ```bash
-ddev roster                     # regenerate the synthetic roster + photos
-ddev roster --students 60 --sections 3
-ddev photos --verify www/json/data.json   # check photo filenames match a roster
-ddev sheet-dump BIO354 --list   # what is actually in the course spreadsheet?
-ddev roster-real BIO201         # import the REAL roster (staff only — see below)
+ddev roster BIO201                        # regenerate that course's synthetic roster
+ddev roster BIO201 --students 60 --sections 3
+ddev photos --verify data/BIO354/json/data.json   # do photo names match a roster?
+ddev sheet-dump BIO354 --list             # what is in the course spreadsheet?
+ddev roster-real BIO354                   # import the REAL roster (staff — see below)
+ddev add-test-ta BIO354 ta_netid ta_name    # a login that can reach a REAL roster
 ```
+
+Every one of these takes the course as its first argument and touches only that
+course. Run them with no argument to list the installed courses.
 
 ---
 
@@ -57,9 +68,10 @@ ddev roster-real BIO201         # import the REAL roster (staff only — see bel
 
 **The real roster must never be committed, and is not needed to develop.**
 
-* `www/json/data.json`, `templates.json`, `log.json` are **generated** and
-  gitignored. On production they are produced by `makeJSON.py`; locally they are
-  synthetic.
+* Each course's `json/data.json`, `templates.json` and `log.json` are
+  **generated**, and live outside the repo under
+  `../userData/TAHelper/<COURSE>/json/`. On production they are produced by
+  `makeJSON.py`; locally they are synthetic.
 * The Google service-account key (`client_secret.json`) is gitignored and is
   distributed out-of-band to staff who run the import — it is the only thing
   that unlocks the live roster. Only the empty `client_secret.example.json`
@@ -92,10 +104,11 @@ Google account that has access to it — only the service account needs access.
 **3. Import the roster.**
 
 ```bash
-ddev roster-real BIO201        # or BIO354
+ddev roster-real BIO354        # or BIO201, or any installed course
 ```
 
-This **writes** `www/json/data.json`, `templates.json` and `log.json`. The text
+This **writes** that course's `json/data.json`, `templates.json` and
+`log.json` — outside the repo, under `../userData/TAHelper/<COURSE>/json/`. The text
 it prints is only a progress log — do **not** redirect it to a file (`> x.json`
 gives you a log full of student data, not a roster). Add `TAHELPER_VERBOSE=1`
 for per-tab detail.
@@ -108,22 +121,22 @@ also how you pick up edited questions.
 below. Save the SOLAR roster pages, then:
 
 ```bash
-ddev photos --in ./solar-pages --out ./solar-pages/out
-ddev photos --verify www/json/data.json     # who would have no photo?
+ddev photos --in ./solar-pages --out data/BIO354/images   # straight into storage
+ddev photos --verify data/BIO354/json/data.json   # who would have no photo?
 ```
 
-Copy the resulting `{Name},{hash}.jpg` files into the course's images directory
-(`www/images`, which is a symlink into the userData storage).
+`--out data/<COURSE>/images` writes straight through that course's symlink into
+its storage, so there is nothing left to copy by hand.
 
 **5. When you're done**, get the real data off your machine:
 
 ```bash
-ddev roster                    # restores the synthetic roster
+ddev roster BIO354             # restores that course's synthetic roster
 rm -rf sheet-dump/             # and any spreadsheet dumps
 ```
 
-> ⚠️ While a real import is in place, your working copy holds real student
-> names and netIDs. They are gitignored and the pre-commit hook blocks
+> ⚠️ While a real import is in place, `../userData/` holds real student names
+> and netIDs. They are gitignored and the pre-commit hook blocks
 > committing them, but don't copy them elsewhere, and don't leave them lying
 > around after you're finished.
 
@@ -213,12 +226,12 @@ redirecting the output cannot create a file full of student rows.
 
 ```bash
 python3 extractStudentsFromHTML.py --in ./saved-solar --out ./Temp
-python3 extractStudentsFromHTML.py --verify www/json/data.json
+python3 extractStudentsFromHTML.py --verify data/BIO354/json/data.json
 ```
 
 Input is SOLAR class-roster pages **saved to disk** (each `<name>.html` plus its
-`<name>_files/` folder). Copy the resulting images into the course's `images/`
-storage directory.
+`<name>_files/` folder). Point `--out` at `data/<COURSE>/images` to write them
+straight into that course's storage.
 
 **These scripts do not log in to SOLAR.** Photos can only come from pages you
 save yourself: open the class roster in SOLAR with photos visible, *File → Save
@@ -248,18 +261,86 @@ photos. No credentials, no network.
 ## Layout
 
 ```
-www/                     web root (docroot)
-  index.html  js/  css/  the jQuery SPA
-  iam.php                identity (env-supplied)
-  evaluationInfo.php     read/write one evaluation
-  responseInfo.php       CSV export / clear
-  upload.php             photo upload
-  json/                  roster + questionnaires (generated, gitignored)
-  studentResponses/ groupResponses/ images/   → symlinks to userData storage
+www/                       web root — CODE ONLY, no student data anywhere
+  index.php                course picker (redirects if only one course)
+  .htaccess                the Shibboleth gate (env-supplied)
+  js/  css/                the jQuery SPA — SHARED by every course
+  BIO201/                  one directory per course; six thin entry points
+    index.php              the app
+    roster.php             serves this course's JSON
+    photo.php              serves this course's student photos
+    evaluationInfo.php  responseInfo.php  upload.php
+  BIO354/                  … identical
+data/                      OUTSIDE the web root — symlinks to storage
+  BIO201/{json,images,studentResponses,groupResponses} → ../../../userData/TAHelper/BIO201/…
+  BIO354/…
+lib/                       shared implementations, NOT web-servable
+  course_boot.php          resolves the course, enforces its staff list, builds the user
+  app_shell.php            the SPA page
+  roster.php  photo.php  evaluationInfo.php  responseInfo.php  upload.php
 makeJSON.py  extractStudentsFromHTML.py  makeSyntheticRoster.py   pipeline
-dumpSheet.py             download the spreadsheet as CSV to inspect it
-requirements.txt         python deps (installed into the DDEV web image)
+dumpSheet.py               download the spreadsheet as CSV to inspect it
 ```
+
+**No student data is reachable over HTTP except through a PHP endpoint that
+checks the caller.** Rosters, photos and responses live at
+`../userData/TAHelper/<COURSE>/` — above the checkout, so nothing git tracks can
+contain them, and they survive rebuilding the containers.
+
+### Signing in against a real roster
+
+The four bundled personas exist in the *synthetic* roster, so they can sign in to
+a course seeded by `ddev roster <COURSE>`. They are deliberately absent from a
+real imported roster and are refused there, which leaves no way to exercise one
+locally. `ddev add-test-ta` closes that in one step:
+
+```bash
+ddev add-test-ta BIO354 ta_netid ta_name    # then: ddev restart
+```
+
+It adds the staff row to that course's local roster **and** registers the login
+with the bundled IdP (`<netid>pass` by default, or `--password`). Both outputs
+are gitignored — they are per-developer scaffolding, not project configuration;
+`.ddev/tahelper/users-app.sample.php` documents the shape. Re-run it after any
+`ddev roster-real`, which regenerates the roster from the spreadsheet and drops
+the row.
+
+### Access is per course
+
+The web server only demands *a* Shibboleth session, so on its own it lets any
+university netID reach any course. `lib/course_boot.php` closes that: every
+entry point resolves the course, then requires the caller to appear in the
+`TA Groups` section of **that course's** roster. Being staff on BIO201 gets you
+a 403 on BIO354, with a message saying so rather than a blank page.
+
+That is also why `json/` and `images/` are no longer inside `www/`: while they
+were, Apache served them directly and no PHP check could apply.
+
+### How one codebase serves several courses
+
+`www/<COURSE>/index.php` sets `$TAHELPER_COURSE` and includes
+`lib/course_boot.php`, which resolves `$TAHELPER_DATA` (that course's storage)
+and `$TAHELPER_USER`. The shared implementations read and write only through
+`$TAHELPER_DATA`, so they never need to know which course they are serving. The
+page emits `window.TAHELPER_COURSE` and `window.TAHELPER_USER`; shared assets
+are absolute (`/js`, `/css`) and every data URL stays relative.
+
+### Adding a course
+
+```bash
+C=BIO101
+mkdir -p www/$C data/$C
+for f in index evaluationInfo responseInfo upload roster photo; do
+  sed "s/BIO201/$C/" www/BIO201/$f.php > www/$C/$f.php
+done
+for d in json images studentResponses groupResponses; do
+  ln -s ../../../userData/TAHelper/$C/$d data/$C/$d
+done
+ddev restart          # provisions the storage + a synthetic roster
+```
+
+Nothing else needs editing: the picker, the provisioner and the `ddev` commands
+all discover courses from `www/` plus a matching `data/<COURSE>`.
 
 ## Known issues
 
@@ -269,3 +350,20 @@ requirements.txt         python deps (installed into the DDEV web image)
   relied on for grades.
 * Evaluations are keyed `{evaluator}_{group}_{student}` with no date, so saving
   again **overwrites** the previous record rather than keeping history.
+
+## Where the data lives
+
+```
+sbu_tll_repos/
+  userData/TAHelper/<COURSE>/{json,images,studentResponses,groupResponses}
+  TAHelper/                     ← the repo; data/<COURSE>/ symlinks point up here
+```
+
+One level **above** the checkout, so no roster, photo or response can be caught
+by `git add`. `.ddev/docker-compose.userdata.yaml` bind-mounts it into the web
+container, which means it is a normal directory on your machine — inspectable,
+backup-able, and it survives `ddev delete`. (It used to exist only inside the
+container, where a rebuild silently discarded it.)
+
+To start over for one course: `ddev roster <COURSE>` (synthetic) or
+`ddev roster-real <COURSE>` (re-import from the spreadsheet).

@@ -1,4 +1,8 @@
 <?php
+/**
+ * Shared implementation — one copy serves every course. $TAHELPER_DATA is that
+ * course's data directory, set up by the entry point (see lib/course_boot.php).
+ */
 $request = $_GET["request"];
 $type = $_GET["type"];
 // var_dump($request, $type);
@@ -36,7 +40,7 @@ function makeRow($json_data){
 }
 switch ($type) {
 	case "all":
-		$fn_pattern = "studentResponses/*";
+		$fn_pattern = "$TAHELPER_DATA/studentResponses/*";
 		break;
 	case "mix":
 		$data = $_POST["data"];
@@ -44,11 +48,11 @@ switch ($type) {
 		$groups = $data["Groups"];
 		// guaranteed to have at least one element in $evaluators or $groups at this point
 		if (empty($evaluators)) {
-			$fn_pattern = "studentResponses/*_{" . implode(',', $groups) . "}_*";
+			$fn_pattern = "$TAHELPER_DATA/studentResponses/*_{" . implode(',', $groups) . "}_*";
 		} else if (empty($groups)) {
-			$fn_pattern = "studentResponses/{" . implode(',', $evaluators). "}_*";
+			$fn_pattern = "$TAHELPER_DATA/studentResponses/{" . implode(',', $evaluators). "}_*";
 		} else {
-			$fn_pattern = "studentResponses/{" . implode(',', $evaluators). "}_{" . implode(',', $groups) . "}_*";
+			$fn_pattern = "$TAHELPER_DATA/studentResponses/{" . implode(',', $evaluators). "}_{" . implode(',', $groups) . "}_*";
 		}
 		break;
 	default:
@@ -64,7 +68,7 @@ if ($request == "clear") { /* Clear Responses */
 	header('Content-disposition: attachment; filename=responses.csv');
 	$outfile = fopen('php://output', 'w');
 
-	$fn_template = "json/templates.json";
+	$fn_template = "$TAHELPER_DATA/json/templates.json";
 	$template = file_get_contents($fn_template);
 	$decoded_template = json_decode($template, true);
 	// print_r($decoded_template);

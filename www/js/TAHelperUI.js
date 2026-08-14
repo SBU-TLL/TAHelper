@@ -106,21 +106,16 @@ class TAHelperUI {
 //if(!sessionID){
 //sessionID= groups[0].split('-')[0];
 //}
- let groupMap=[[1,2,3,997,998,999],
-[4,5,6,29,19,20],
-[7,8,9,30,21,22],
-[10,11,12,33,23,24],
-[13,14,15,31,25,26],
-[16,17,18,333,27,28]].flat().map(a=>`${sessionID}-${a}`)
-let groupsFilter;
-console.log(this.userInfo)
-if(window.location.href.includes("201") && !this.userInfo.Type=="Group Facilitator"){
-groupsFilter= [...groups]//.map(a=>`${sessionID}-${a}`);
-groups=[...groupMap]; 
-}
-else{
-groups= groups.sort(function(a, b){return a - b})
-}
+  // NOTE: a BIO201-only branch used to sit here, swapping `groups` for a
+  // hardcoded list and then hiding the ones the user is not assigned to. It was
+  // guarded by `!this.userInfo.Type=="Group Facilitator"`, which parses as
+  // `(!Type) == "Group Facilitator"` — false for every role — so the branch had
+  // never run and the sort below always did. Removed rather than "corrected":
+  // repairing the precedence would silently switch on a hardcoded group list,
+  // and it keyed off the URL containing "201", which now matches any course
+  // whose code happens to contain it. See git history if that mapping is ever
+  // wanted back — it belongs in the course's own data, not in the UI.
+  groups = groups.sort(function(a, b){return a - b})
     var groupDivs = groups.map(groupID => $('<div/>', {
       id: `${groupID}`,
       class: `session-group card-item flexChildren`
@@ -138,14 +133,6 @@ groups= groups.sort(function(a, b){return a - b})
      ).click(evt => this.handleClickEvent(evt)));
 
     this.addToParentById("content" /* parent container */, groupDivs);
-  if(groupsFilter){
-let removeGroups= groups.filter((group)=>!groupsFilter.includes(group))
-removeGroups.forEach(groupID=>{
-console.log(`#${groupID}`)
-$(`#${groupID}`).children().css("visibility","hidden");
-$(`#${groupID}`).off("click")
-})
-}
   }
   getTAfromGroupID(groupID){
 console.log(this.TAInfo["nkdean"])
@@ -191,7 +178,10 @@ return TA.Name
       class: `profile`,
       id: `${student.NetID}_img`,
       // src: `images/${i.Name.replaceAll(' ','_').replaceAll('\'','-') + "," + i.SID}.jpg}` // students might have names with special characters
-      src: `images/${student.Name},${student.SID}.jpg`,
+      // Photos are served by photo.php, which applies the same per-course staff
+      // check as the roster; data-photo keeps the bare filename for uploads.
+      src: `photo.php?f=${encodeURIComponent(`${student.Name},${student.SID}.jpg`)}`,
+      'data-photo': `${student.Name},${student.SID}.jpg`,
       onload: () => this.handleImageLoaded(),
       // onerror: `this.src='images/no-image-available.jpg'` // alt image if none found
     }).click(evt => {this.handleClickEvent(evt)} )
@@ -386,7 +376,7 @@ return TA.Name
         break
       case "import":
         $('.modal-footer').hide()
-        fetch("json/log.json")
+        fetch("roster.php?f=log")
         .then(function(response) { return response.json(); })
         .then(function(json) {
           modalBody.append(json.lastImport)
@@ -550,7 +540,7 @@ return TA.Name
                 fileTag.trigger('click').on( "change",()=>{
                 var fd = new FormData();
                 var files = fileTag[0].files[0];
-                fd.append("fileName", clickedItem.attr("src"));
+                fd.append("fileName", clickedItem.attr("data-photo"));
                 fd.append('file', files);
                 $.ajax({ 
                     url: 'upload.php',
