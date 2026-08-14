@@ -1,7 +1,8 @@
 #!/bin/bash
 ## Description: Extract student photos from saved SOLAR pages (or --verify a roster)
-## Usage: photos [--in DIR] [--out DIR] [--verify www/json/data.json]
-## Example: "ddev photos --out ./out" | "ddev photos --verify www/json/data.json"
+## Usage: photos [--in DIR] [--out DIR] [--verify data/<COURSE>/json/data.json]
+## Example: "ddev photos --in ./solar-pages --out data/BIO354/images"
+## Example: "ddev photos --verify data/BIO354/json/data.json"
 ## ProjectTypes: php
 cd /var/www/html || exit 1
 

@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 # DDEV-only: make a fresh clone runnable WITHOUT any real student data.
 #
+# One deployment serves several courses, each from its own directory under the
+# web root (www/BIO201/, www/BIO354/, …) whose json/, images/, studentResponses/
+# and groupResponses/ are symlinks into ../../../userData/TAHelper/<COURSE>/.
+# That storage lives outside the repo, so no course data is ever near git.
+#
 # Provisions the files the app needs but git deliberately does not carry:
-#   www/iam.php            - identity from Shibboleth (production ships its own)
-#   www/.htaccess          - the Shibboleth session gate
-#   www/json/data.json     - SYNTHETIC roster (the real one is generated on the
-#                            production host by makeJSON.py and is gitignored)
-#   www/json/templates.json- questionnaire definitions
-#   placeholder photos     - so the images/ code path is exercised locally
-# plus the targets of the production storage symlinks, and a git guard that
-# refuses to commit a real roster.
+#   www/.htaccess                - the Shibboleth session gate
+#   <COURSE>/json/data.json      - SYNTHETIC roster (the real one comes from
+#                                  makeJSON.py and is never committed)
+#   <COURSE>/json/templates.json - questionnaire definitions
+#   placeholder photos           - so the images/ code path is exercised locally
+# plus the symlink targets themselves, and a git guard against committing a
+# real roster.
 #
 # Nothing here ever overwrites a file that already exists.
 set -u
@@ -17,7 +21,14 @@ set -u
 SRC=/mnt/ddev_config/tahelper   # .ddev/ is mounted here inside the web container
 APP=/var/www/html/www
 REPO=/var/www/html
-DATA=/var/www/userData/TAHelper/BIO201
+STORAGE=/var/www/userData/TAHelper
+
+# Courses are discovered from the web root rather than listed here, so adding
+# www/<COURSE>/ to the repo is all it takes.
+COURSES=$(cd "$APP" && for d in */; do
+    d=${d%/}
+    [ -f "$d/index.php" ] && [ -d "$REPO/data/$d" ] && echo "$d"
+done)
 
 install_if_missing() {
     local src="$1" dest="$2"
@@ -30,26 +41,35 @@ install_if_missing() {
     fi
     mkdir -p "$(dirname "$dest")"
     cp "$src" "$dest"
-    echo "tahelper: provisioned $(basename "$dest")"
+    echo "tahelper: provisioned ${dest#$APP/}"
 }
 
-install_if_missing "$SRC/iam-template.php"      "$APP/iam.php"
-install_if_missing "$SRC/htaccess"              "$APP/.htaccess"
-install_if_missing "$SRC/data.sample.json"      "$APP/json/data.json"
-install_if_missing "$SRC/templates.sample.json" "$APP/json/templates.json"
+install_if_missing "$SRC/htaccess"         "$APP/.htaccess"
 
-# Targets of the committed production storage symlinks (studentResponses,
-# groupResponses, images all point at ../../userData/TAHelper/BIO201/...).
-mkdir -p "$DATA/studentResponses" "$DATA/groupResponses" "$DATA/images"
+for COURSE in $COURSES; do
+    DATA="$STORAGE/$COURSE"
+    mkdir -p "$DATA/json" "$DATA/studentResponses" "$DATA/groupResponses" "$DATA/images"
 
-# Placeholder photos for the synthetic roster, so student cards aren't broken
-# images. Best effort: skipped if the images dir already has content.
-if [ -z "$(ls -A "$DATA/images" 2>/dev/null)" ]; then
-    if python3 "$REPO/makeSyntheticRoster.py" --out-dir /tmp/tahelper-seed \
-            --image-dir "$DATA/images" --force >/dev/null 2>&1; then
-        echo "tahelper: generated placeholder photos"
+    install_if_missing "$SRC/data.sample.json"      "$DATA/json/data.json"
+    install_if_missing "$SRC/templates.sample.json" "$DATA/json/templates.json"
+
+    # The UI's "last import" panel fetches json/log.json; only makeJSON.py writes
+    # one, so without this the panel 404s on a synthetic roster.
+    if [ ! -e "$DATA/json/log.json" ]; then
+        printf '{\n    "lastImport": "%s (synthetic roster)"\n}\n' \
+            "$(date '+%d/%m/%Y %H:%M:%S')" > "$DATA/json/log.json"
+        echo "tahelper: $COURSE: wrote a placeholder log.json"
     fi
-fi
+
+    # Placeholder photos for the synthetic roster, so student cards aren't broken
+    # images. Best effort: skipped if the images dir already has content.
+    if [ -z "$(ls -A "$DATA/images" 2>/dev/null)" ]; then
+        if python3 "$REPO/makeSyntheticRoster.py" --out-dir /tmp/tahelper-seed-$COURSE \
+                --image-dir "$DATA/images" --force >/dev/null 2>&1; then
+            echo "tahelper: $COURSE: generated placeholder photos"
+        fi
+    fi
+done
 
 # --- guard: never let a real roster get committed ---------------------------
 # The generated json files are gitignored, but `git add -f` (or a future change

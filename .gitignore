@@ -4,6 +4,10 @@
 ._*
 .vscode
 # ignore secret files
+# Per-developer IdP logins written by `ddev add-test-ta` (see the .example).
+# These are local test identities, not project configuration.
+/.ddev/shib-idp/config/users-app.php
+/.ddev/shib-idp/config/users-app.local.json
 /www/iam.php
 /www/json/dataDev.json
 # ignore directories
@@ -20,9 +24,13 @@ __pycache__/
 # Produced by makeJSON.py from the live Google Sheet and containing real
 # student names/netIDs. Local development uses makeSyntheticRoster.py instead;
 # .ddev provisions a synthetic data.json automatically on `ddev start`.
-/www/json/data.json
-/www/json/templates.json
-/www/json/log.json
+# (roster data now lives outside the repo entirely, under
+# ../userData/TAHelper/<COURSE>/json — reachable only through the per-course
+# symlinks, so there is nothing left inside the repo to ignore.)
+# Saved SOLAR exports arrive as whole folders with arbitrary names; ignore the
+# folder as well as the pages and photos inside it.
+/Bio */
+/solar-pages/
 # Saved SOLAR pages and extracted photos (real student names + faces).
 # These arrive as arbitrary folder names, so match them anywhere in the tree.
 Temp/

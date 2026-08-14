@@ -64,7 +64,8 @@ if ($name === '' || $name[0] === '.') {
 // Force a safe extension matching the real content type.
 $name = preg_replace('/\.[A-Za-z0-9]+$/', '', $name) . '.' . $allowed[$info[2]];
 
-$imagesDir = __DIR__ . '/images';
+// $TAHELPER_DATA is this course's data directory (lib/course_boot.php).
+$imagesDir = $TAHELPER_DATA . '/images';
 if (!is_dir($imagesDir)) {
     mkdir($imagesDir, 0755, true);
 }

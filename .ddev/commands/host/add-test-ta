@@ -1,0 +1,30 @@
+#!/bin/bash
+## Description: Add a test staff row + IdP login for local testing (dev only)
+## Usage: add-test-ta <COURSE> <netid> <name...> [--type ROLE] [--password PW]
+## Example: "ddev add-test-ta BIO354 faridnet farid"
+## ProjectTypes: php
+## HostWorkingDir: true
+
+if [ -z "${2:-}" ]; then
+    echo "usage: ddev add-test-ta <COURSE> <netid> <name...> [--type ROLE] [--password PW]"
+    echo "example: ddev add-test-ta BIO354 faridnet farid"
+    exit 1
+fi
+
+ddev exec python3 /var/www/html/.ddev/tahelper/add_test_ta.py "$@" || exit 1
+
+# This command runs on the HOST for one reason: the IdP image is built from
+# .ddev/shib-idp as it exists here, SimpleSAMLphp reads the config as www-data,
+# and the container file sync normalises the host copy to 0600 — which makes the
+# login flow answer 500 instead of showing a form. The container cannot fix that
+# for us, so wait for the generated file to land and set the mode here.
+CFG="${DDEV_APPROOT}/.ddev/shib-idp/config/users-app.php"
+for _ in $(seq 1 30); do
+    [ -f "$CFG" ] && break
+    sleep 1
+done
+if [ -f "$CFG" ]; then
+    chmod 644 "$CFG"
+else
+    echo "warning: $CFG did not appear; the IdP login may not be registered." >&2
+fi
