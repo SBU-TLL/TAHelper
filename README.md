@@ -70,7 +70,7 @@ course. Run them with no argument to list the installed courses.
 
 * Each course's `json/data.json`, `templates.json` and `log.json` are
   **generated**, and live outside the repo under
-  `../userData/TAHelper/<COURSE>/json/`. On production they are produced by
+  `data/<COURSE>/json/`. On production they are produced by
   `makeJSON.py`; locally they are synthetic.
 * The Google service-account key (`client_secret.json`) is gitignored and is
   distributed out-of-band to staff who run the import — it is the only thing
@@ -108,7 +108,7 @@ ddev roster-real BIO354        # or BIO201, or any installed course
 ```
 
 This **writes** that course's `json/data.json`, `templates.json` and
-`log.json` — outside the repo, under `../userData/TAHelper/<COURSE>/json/`. The text
+`log.json` under `data/<COURSE>/json/`. The text
 it prints is only a progress log — do **not** redirect it to a file (`> x.json`
 gives you a log full of student data, not a roster). Add `TAHELPER_VERBOSE=1`
 for per-tab detail.
@@ -135,8 +135,8 @@ ddev roster BIO354             # restores that course's synthetic roster
 rm -rf sheet-dump/             # and any spreadsheet dumps
 ```
 
-> ⚠️ While a real import is in place, `../userData/` holds real student names
-> and netIDs. They are gitignored and the pre-commit hook blocks
+> ⚠️ While a real import is in place, `data/` holds real student names and
+> netIDs. They are gitignored and the pre-commit hook blocks
 > committing them, but don't copy them elsewhere, and don't leave them lying
 > around after you're finished.
 
@@ -271,9 +271,9 @@ www/                       web root — CODE ONLY, no student data anywhere
     photo.php              serves this course's student photos
     evaluationInfo.php  responseInfo.php  upload.php
   BIO354/                  … identical
-data/                      OUTSIDE the web root — symlinks to storage
-  BIO201/{json,images,studentResponses,groupResponses} → ../../../userData/TAHelper/BIO201/…
-  BIO354/…
+data/                      OUTSIDE the web root — the live course data
+  BIO201/{json,images,studentResponses,groupResponses}
+  BIO354/…                 (gitignored; see data/README.md)
 lib/                       shared implementations, NOT web-servable
   course_boot.php          resolves the course, enforces its staff list, builds the user
   app_shell.php            the SPA page
@@ -283,9 +283,9 @@ dumpSheet.py               download the spreadsheet as CSV to inspect it
 ```
 
 **No student data is reachable over HTTP except through a PHP endpoint that
-checks the caller.** Rosters, photos and responses live at
-`../userData/TAHelper/<COURSE>/` — above the checkout, so nothing git tracks can
-contain them, and they survive rebuilding the containers.
+checks the caller.** Rosters, photos and responses live in `data/<COURSE>/`,
+inside the repository but outside the web root — see
+[Where the data lives](#where-the-data-lives).
 
 ### Signing in against a real roster
 
@@ -329,18 +329,16 @@ are absolute (`/js`, `/css`) and every data URL stays relative.
 
 ```bash
 C=BIO101
-mkdir -p www/$C data/$C
+mkdir -p www/$C
 for f in index evaluationInfo responseInfo upload roster photo; do
   sed "s/BIO201/$C/" www/BIO201/$f.php > www/$C/$f.php
 done
-for d in json images studentResponses groupResponses; do
-  ln -s ../../../userData/TAHelper/$C/$d data/$C/$d
-done
-ddev restart          # provisions the storage + a synthetic roster
+ddev restart          # creates data/$C and seeds a synthetic roster
 ```
 
-Nothing else needs editing: the picker, the provisioner and the `ddev` commands
-all discover courses from `www/` plus a matching `data/<COURSE>`.
+Nothing else needs editing: a course *is* a directory under `www/` with an
+`index.php`, and the picker, the provisioner and the `ddev` commands all discover
+them from there. Its data directory is created for you.
 
 ## Known issues
 
@@ -354,16 +352,25 @@ all discover courses from `www/` plus a matching `data/<COURSE>`.
 ## Where the data lives
 
 ```
-sbu_tll_repos/
-  userData/TAHelper/<COURSE>/{json,images,studentResponses,groupResponses}
-  TAHelper/                     ← the repo; data/<COURSE>/ symlinks point up here
+TAHelper/
+  data/<COURSE>/{json,images,studentResponses,groupResponses}
+  www/                          the web root — never contains data
 ```
 
-One level **above** the checkout, so no roster, photo or response can be caught
-by `git add`. `.ddev/docker-compose.userdata.yaml` bind-mounts it into the web
-container, which means it is a normal directory on your machine — inspectable,
-backup-able, and it survives `ddev delete`. (It used to exist only inside the
-container, where a rebuild silently discarded it.)
+Inside the repository, outside the web root. Apache cannot serve it, so the only
+way in is `roster.php` / `photo.php`, both behind the per-course staff check.
 
-To start over for one course: `ddev roster <COURSE>` (synthetic) or
-`ddev roster-real <COURSE>` (re-import from the spreadsheet).
+**Nothing under `data/` is ever committed.** It is gitignored except for
+`data/README.md`, and `ddev start` installs a pre-commit hook that refuses
+anything else there. Both guards matter: this is real student data — names,
+netIDs and faces — sitting in a git checkout.
+
+> ⚠️ **`git clean -xdf` will delete every course's data**, because removing
+> ignored files is exactly what that command does. It takes `client_secret.json`
+> and any saved SOLAR exports with it. Rosters can be re-imported with
+> `ddev roster-real <COURSE>`; **saved evaluations cannot be recovered**. Back
+> `data/` up before cleaning the working tree.
+
+Nothing here comes from a clone. `ddev start` creates the directories and seeds a
+synthetic roster for every course it finds under `www/`. To reset one course:
+`ddev roster <COURSE>` (synthetic) or `ddev roster-real <COURSE>` (re-import).

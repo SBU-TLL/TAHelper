@@ -6,9 +6,9 @@ a course whose roster is synthetic — they are not in a real imported one, so
 they get a 403. This adds a matching staff row so a persona can sign in to a
 course carrying the real roster.
 
-Local development only. It writes to the local storage under userData/, which is
-outside the repository; production rosters come from makeJSON.py and are never
-touched by this. A re-import (`ddev roster-real <COURSE>`) regenerates the file
+Local development only. It writes to data/<COURSE>/ in the working copy, which is
+gitignored and guarded by the pre-commit hook; production rosters come from
+makeJSON.py and are never touched by this. A re-import (`ddev roster-real <COURSE>`) regenerates the file
 from the spreadsheet and drops the row, so re-run this afterwards.
 
 The row is built the way makeJSON.py builds one: an admin role (Professor/GTAs)
@@ -95,7 +95,7 @@ def main():
     ap.add_argument("netid")
     ap.add_argument("name", nargs="+", help="display name, e.g. farid")
     ap.add_argument("--type", dest="role", default="GTAs", choices=ROLES)
-    ap.add_argument("--storage", default="/var/www/userData/TAHelper")
+    ap.add_argument("--storage", default="/var/www/html/data")
     ap.add_argument("--password", help="IdP password (default: <netid>pass)")
     ap.add_argument("--no-idp", action="store_true",
                     help="only touch the roster; leave the IdP logins alone")
