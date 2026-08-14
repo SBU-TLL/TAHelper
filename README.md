@@ -370,6 +370,14 @@ TAHelper/
   www/                          the web root — never contains data
 ```
 
+```
+data/<COURSE>/
+  json/               data.json (roster), templates.json (questionnaires), log.json
+  images/             student photos, "{Name},{sha256(StudentID)}.jpg"
+  studentResponses/   one JSON file per saved student evaluation
+  groupResponses/     one JSON file per saved group evaluation
+```
+
 Inside the repository, outside the web root. Apache cannot serve it, so the only
 way in is `roster.php` / `photo.php`, both behind the per-course staff check.
 
@@ -377,13 +385,3 @@ way in is `roster.php` / `photo.php`, both behind the per-course staff check.
 `data/README.md`, and `ddev start` installs a pre-commit hook that refuses
 anything else there. Both guards matter: this is real student data — names,
 netIDs and faces — sitting in a git checkout.
-
-> ⚠️ **`git clean -xdf` will delete every course's data**, because removing
-> ignored files is exactly what that command does. It takes `client_secret.json`
-> and any saved SOLAR exports with it. Rosters can be re-imported with
-> `ddev roster-real <COURSE>`; **saved evaluations cannot be recovered**. Back
-> `data/` up before cleaning the working tree.
-
-Nothing here comes from a clone. `ddev start` creates the directories and seeds a
-synthetic roster for every course it finds under `www/`. To reset one course:
-`ddev roster <COURSE>` (synthetic) or `ddev roster-real <COURSE>` (re-import).
