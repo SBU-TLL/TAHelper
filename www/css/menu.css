@@ -1,28 +1,37 @@
 /*** CSS content for menu ***/
 
 button.menu-button {
-  margin: 5px;
-  padding: 10px 30px;
-  background-color: black;
-  border-style: inset;
-  border-color: gray;
-  border-width: 3px;
+  margin: 8px 10px;
+  padding: 0.7rem 1.25rem;
+  background: var(--sbu-dark-red);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
   color: white;
-  font-size: 16px;
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+button.menu-button:hover,
+button.menu-button:focus,
+button.menu-button:active {
+  background: var(--sbu-red);
 }
 
 div.menu {
-  background-color: lightgray;
   position: fixed;
-  top: 0;
+  top: 12px;
+  z-index: 10;
 }
 
 div#left-menu {
-  left: 0;
+  left: 18px;
 }
 
 div#right-menu {
-  right: 0;
+  right: 18px;
 }
 
 div#right-menu:hover .dropdown-content {
@@ -32,17 +41,27 @@ div#right-menu:hover .dropdown-content {
 .dropdown-content {
   display: none;
   position: absolute;
+  right: 0;
+  min-width: 220px;
   background-color: white;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 1;
+  border: 1px solid var(--sbu-border);
+  border-radius: 14px;
+  box-shadow: 0 18px 28px rgba(107, 0, 13, 0.16);
+  z-index: 20;
+  overflow: hidden;
 }
 
 .dropdown-content button {
+  display: block;
+  width: 100%;
+  text-align: left;
   background-color: white;
-  color: black;
-  padding: 12px 16px;
-  margin: 0px;
+  color: var(--sbu-ink);
+  padding: 0.8rem 1rem;
+  margin: 0;
   border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .dropdown-content button:focus {
@@ -50,5 +69,6 @@ div#right-menu:hover .dropdown-content {
 }
 
 .dropdown-content button:hover {
-  background-color: #f9f9f9;
+  background: #f3f3f3;
+  color: var(--sbu-dark-red);
 }

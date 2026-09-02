@@ -183,18 +183,24 @@ return TA.Name
       src: `photo.php?f=${encodeURIComponent(`${student.Name},${student.SID}.jpg`)}`,
       'data-photo': `${student.Name},${student.SID}.jpg`,
       onload: () => this.handleImageLoaded(),
+      alt: `Image of ${student.Name}`
       // onerror: `this.src='images/no-image-available.jpg'` // alt image if none found
     }).click(evt => {this.handleClickEvent(evt)} )
+    ,$('<label/>', {
+      for: `${student.NetID}_upload`,
+      text: "Upload Student Photo",
+      style: "display:none"
+    })
     ,$('<input>',{type:"file",accept:"image/*",capture:"enviroment",id:`${student.NetID}_upload` ,style:"display:none"}) 
     ,$('<div/>', {
       class: `student-info flexText`
-    }).append($('<label/>', {
+    }).append($('<div/>', {
       class: `subheader-width subheader-font`,
       html: `${student.Name}`
-    }), $('<label/>', {
+    }), $('<div/>', {
       class: `subheader-width subheader-color2`,
       html: `NetID: ${student.NetID}`
-    }), $('<label/>', {
+    }), $('<div/>', {
       class: `subheader-color2 ${hidden}`,
       html: `Warning: ${student.Warning}`
     })
@@ -465,8 +471,7 @@ return TA.Name
             for: `section-session-option-${sessionID}`,
             html: `Section ${sessionID}<br>`
           });
-
-          let groups = data.filter(x => x.includes(sessionID)).map(groupID => {
+          let groups = data.filter(x => x.startsWith(sessionID)).map(groupID => {
             let groupInput = $('<input/>', {
               id: `section-group-option-${groupID}`,
               class: `sub-sub-option`,

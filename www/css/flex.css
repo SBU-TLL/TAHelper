@@ -1,7 +1,6 @@
 /*** CSS content for TAHelper ***/
 
 .flexContainer {
-width:100%;
   min-height: calc(100% - 30px);
   display: flex;
   flex-wrap: wrap;

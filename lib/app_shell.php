@@ -41,7 +41,7 @@ if (!is_string($course) || !is_array($user)) {
   <div class="loader loader-bar is-active" data-text data-blink></div>
   <div id="left-menu" class="menu"></div>
   <div id="right-menu" class="menu"></div>
-  <div id="header"></div>
+  <div id="header">TAHelper</div>
   <div id="content" class="flexContainer"></div>
 </body>
 
