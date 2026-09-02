@@ -296,7 +296,7 @@ label#no-students-label {
 label#form-saved-label {
   display: block;
   margin: auto;
-  margin-bottom: 5px;
+  margin-top: 12px;
   font-style: italic;
   color: var(--sbu-dark-red);
 }

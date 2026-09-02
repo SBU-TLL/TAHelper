@@ -241,15 +241,16 @@ return TA.Name
 
     var saveDiv = $('<div/>', {
       id: `form-save-div`
-    }).append($('<label/>', { // initially hidden until user saves form
-      id: `form-saved-label`,
-      for: `form-save-button`,
-      html: `All changes have been saved.`
-    }).hide(), $('<button/>', {
+    }).append($('<button/>', {
       id: `form-save-button`,
       class: `save-button`,
       html: `Save`
-    }).click(evt => this.handleSaveRequest()));
+    }).click(evt => this.handleSaveRequest()),
+    $('<label/>', { // initially hidden until user saves form
+      id: `form-saved-label`,
+      for: `form-save-button`,
+      html: `All changes have been saved.`
+    }).hide(), );
 
     var form = $('<form/>', {
       class: (type == "group") ? `group-form` : ``,
@@ -350,6 +351,12 @@ return TA.Name
       class: 'modal-request-button',
       html: `${footerLabel[type][0]}`
     }).click(evt => this.handleModalSubmitRequest(type)));
+
+    if(type == "clear" || type == "download") {
+      modalFooter.prepend($('<span/>', {
+        class: 'modal-message'
+      }))
+    }
 	}
     if (footerLabel[type].length > 1) {
       modalFooter.append($('<button/>', {
@@ -780,7 +787,10 @@ console.log(whichBack)
           var checkedEvaluators = $(`input[type=checkbox][name=section-evaluator]:checked`);
           var checkedGroups = $(`input[type=checkbox][name*=section-session-group-]:not([id*=session]):checked`);
           // console.log(checkedEvaluators, checkedGroups)
-          if (checkedEvaluators.length == 0 && checkedGroups.length == 0) { return; }
+          if (checkedEvaluators.length == 0 && checkedGroups.length == 0) {
+            $('#download-modal .modal-message').text("Select a group before continuing.")
+            return;
+          }
 
           if (checkedEvaluators.length > 0) {
             let checkedAll = checkedEvaluators.filter((_, checked) => $(checked).attr("id").endsWith("-all"));
@@ -811,6 +821,7 @@ console.log(whichBack)
           this.handleModalSubmitRequest("download").then(() => {
             this.handleModalSubmitRequest("clear").then(() => {
               this.handleModalCloseRequest();
+              $('#clear-modal .modal-message').text("Successfully cleared responses.")
             });
           });
           break;
@@ -830,6 +841,7 @@ console.log(whichBack)
       this.handleBackRequest();
     } else if (this.state.waitingOnClearPrompt) {
       this.handleModalSubmitRequest("clear"); // this time, passes through the if case in the handler
+      $('#clear-modal .modal-message').text("Successfully cleared responses.")
     }
 
     this.handleModalCloseRequest();

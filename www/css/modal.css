@@ -74,12 +74,22 @@
 /* Modal Footer */
 .modal-footer {
   width: 100%;
-  display: inline-block;
+  display: inline-flex;
   padding: 0.75rem 1rem;
   background: #f4f4f4;
   color: var(--sbu-ink);
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+
+}
+
+.modal-message {
+  display: inline-flex;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--sbu-dark-red);
 }
 
 /* The Close Button */
