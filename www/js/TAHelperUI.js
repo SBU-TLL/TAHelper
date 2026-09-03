@@ -31,7 +31,8 @@ class TAHelperUI {
       hasUnsavedChanges: false,
       waitingOnSavePrompt: false,
       waitingOnClearPrompt: false,
-      enableGroupEvaluations: false
+      enableGroupEvaluations: false,
+      selectedStudents: []
     };
   }
 
@@ -40,6 +41,7 @@ class TAHelperUI {
   setWaitingOnSavePrompt (val) { this.state.waitingOnSavePrompt = val; }
   setWaitingOnClearPrompt (val) { this.state.waitingOnClearPrompt = val; }
   setEnableGroupEvaluations (val) { this.state.enableGroupEvaluations = val; }
+  clearSelectingStudents (val) { this.state.selectedStudents = []; }
 
   /* Handles any necessary UI updates according to changes in state */
   updateState() {
@@ -173,7 +175,11 @@ return TA.Name
       text: 'Mark all present'
     }).click(evt => {
       evt.stopPropagation();
-      $('#content').trigger('request:mark-all-present', [this.userInfo.NetID, groupID, groupInfo]);
+      if(this.state.selectedStudents.length > 0) {
+        $('#content').trigger('request:mark-all-present', [this.userInfo.NetID, groupID, groupInfo, this.state.selectedStudents]);
+      }else{
+        $('#content').trigger('request:mark-all-present', [this.userInfo.NetID, groupID, groupInfo, null]);
+      }
     });
     var attendanceToolbar = $('<div/>', {
       class: 'attendance-toolbar'
@@ -221,7 +227,24 @@ return TA.Name
     }), $('<div/>', {
       class: `subheader-color2 ${hidden} ${student.Warning ? "" : "hide"}`,
       html: `Warning: ${student.Warning}`
-    })
+    }), $('<div/>', {
+      class: 'student-buttons'
+      }).append($('<button/>', {
+        id: `select_${student.NetID}`,
+        class: 'selection-button',
+        text: 'Select'
+      }).click(evt => {
+        evt.stopPropagation();
+        this.handleStudentSelection(student.NetID);
+      }).attr("aria-label","Select " + student.Name),
+      $('<button/>', {
+        id: `${student.NetID}_view`,
+        class: 'student selection-button',
+        text: 'View'
+      }).click(evt => {
+        evt.stopPropagation();
+        this.handleClickEvent(evt);
+      }).attr("aria-label","View details for " + student.Name))
 
 
    ))//.click(evt => this.handleClickEvent(evt))
@@ -229,7 +252,7 @@ return TA.Name
 
     this.addToParentById(groupID /* parent container */, studDivs);
     $('#content').trigger('request:group-attendance', [this.userInfo.NetID, groupID, groupInfo]);
-    $(`.student`).click(evt => this.handleClickEvent(evt)); 
+    //$(`.student`).click(evt => this.handleClickEvent(evt)); 
 }
 
   /* Updates the attendance indicator on a student tile */
@@ -596,6 +619,9 @@ return TA.Name
   handleClickEvent (evt) {
    let clickedItem=$(evt.currentTarget);
     console.log(clickedItem);
+    if(clickedItem.attr("class").includes("student selection-button")){ //get correct student div
+      clickedItem = $(`#${clickedItem.attr("id").replace("_view","")}`);
+    }
    // clickedItem.off("click"); // removes click event listener to prevent registering multiple clicks
 
     var clickedID = clickedItem.attr("id");
@@ -671,6 +697,9 @@ clickedItem.off("click");
         // notify TAHelper that a student has been selected
         let groupID = $(clickedItem.parent()[0]).attr("id");
         $(document.getElementById(groupID)).find('.attendance-button').hide();
+        $(document.getElementById(groupID)).find('.selection-button').hide();
+        this.clearSelectingStudents();
+        $('.student#' + clickedID).removeClass('selected');
         $("#content").trigger('request:student-eval', [this.userInfo.NetID, groupID, clickedID]);
         break
      default:
@@ -704,6 +733,7 @@ clickedItem.off("click");
         var groupForm = $('.group-form');
         if (groupForm.length == 0) { // backing up from selected group to all groups
           selectedGroup.remove();
+          this.clearSelectingStudents();
 	 whichBack=2.1
           if (!this.isAdmin ) {
 	    whichBack=2.2
@@ -807,6 +837,27 @@ console.log(whichBack)
 
     // notify TAHelper that user is requesting for the group evaluation form
     $('#content').trigger('request:group-eval', [this.userInfo.NetID, groupID]);
+  }
+
+  handleStudentSelection(studentID) {
+    var name = $(document.getElementById(studentID)).find('.subheader-width').first().html();
+    if(this.state.selectedStudents.includes(studentID)) {
+      this.state.selectedStudents.pop(studentID);
+      $('.student#' + studentID).removeClass('selected');
+      $('.student#' + studentID).find('#select_' + studentID).text('Select').attr("aria-label","Select " + name);
+
+      if(this.state.selectedStudents.length == 0) {
+        $('.attendance-button').text('Mark all present');
+      }
+    }else{
+      this.state.selectedStudents.push(studentID);
+      $('.student#' + studentID).addClass('selected');
+      $('.student#' + studentID).find('#select_' + studentID).text('Selected').attr("aria-label","Deselect " + name);
+
+      if(this.state.selectedStudents.length == 1) {
+        $('.attendance-button').text('Mark selected present');
+      }
+    }
   }
 
   /* Handles loading page visibility */

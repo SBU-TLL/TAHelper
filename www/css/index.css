@@ -88,6 +88,16 @@ div.student-info {
   display: block;
 }
 
+div.student-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+div.selected {
+  background: var(--sbu-red-soft);
+}
+
 div.attendance-toolbar {
   position: absolute;
   top: 50%;
@@ -101,6 +111,21 @@ div.header-width {
   position: relative;
 }
 
+button.selection-button {
+  padding: 0.4125rem 0.75rem;
+  background: var(--sbu-dark-red);
+  border: none;
+  border-radius: 999px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-top: 1rem;
+}
+
+button.selection-button:hover {
+  background: var(--sbu-red);
+}
+
 button.attendance-button {
   padding: 0.55rem 1rem;
   background: var(--sbu-dark-red);
@@ -110,6 +135,10 @@ button.attendance-button {
   font-size: 0.95rem;
   font-weight: 700;
   margin: 1rem;
+}
+
+button.attendance-button:hover {
+  background: var(--sbu-red);
 }
 
 div.attendance-status {

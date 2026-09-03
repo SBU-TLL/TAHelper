@@ -48,8 +48,8 @@ class TAHelper {
           this.updateForm(formType, evaluatorID, groupID, studentID, data);
         });
 
-        $('#content').on('request:mark-all-present', (evt, evaluatorID, groupID, students) => {
-          this.markAllPresent(evaluatorID, groupID, students);
+        $('#content').on('request:mark-all-present', (evt, evaluatorID, groupID, students, ids) => {
+          this.markAllPresent(evaluatorID, groupID, students, ids);
         });
 
         $('#content').on('request:group-attendance', (evt, evaluatorID, groupID, students) => {
@@ -81,10 +81,12 @@ class TAHelper {
   }
 
   /* Updates only the attendance answer while preserving the rest of each form */
-  markAllPresent (evaluatorID, groupID, students) {
-    var requests = students.map(student => {
+  markAllPresent (evaluatorID, groupID, students, ids) {
+    students.map(student => {
+      if(ids != null && !ids.includes(student.NetID)) return;
       var filename = `${evaluatorID}_${groupID}_${student.NetID}`;
       var url = `evaluationInfo.php?type=student&date=${this.getCurrentDate()}&filename=${filename}`;
+      this.ui.updateAttendanceStatus(student.NetID, 'Present');
       return $.getJSON(url).then(form => {
         form[0].Value = 'Present';
         return $.post(url, {data: {
@@ -93,10 +95,6 @@ class TAHelper {
         }});
       });
     });
-
-    $.when.apply($, requests).done(() => {
-      this.ui.finishMarkAllPresent(groupID);
-    })
   }
 
 
