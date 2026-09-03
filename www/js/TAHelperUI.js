@@ -167,6 +167,21 @@ return TA.Name
     } else {
       this.hideGroupEvalLink(groupID);
     }
+    var groupElement = document.getElementById(groupID);
+    var attendanceButton = $('<button/>', {
+      class: 'attendance-button',
+      text: 'Mark all present'
+    }).click(evt => {
+      evt.stopPropagation();
+      $('#content').trigger('request:mark-all-present', [this.userInfo.NetID, groupID, groupInfo]);
+    });
+    var attendanceToolbar = $('<div/>', {
+      class: 'attendance-toolbar'
+    }).append(attendanceButton);
+    $(groupElement).find('.attendance-toolbar').remove();
+    var groupHeader = $(groupElement).find('.header-width').first();
+    (groupHeader.length ? groupHeader : $(groupElement)).append(attendanceToolbar);
+
     var hidden="";
     //if(this.userRole.includes("Facil")){
     //hidden="hide"
@@ -201,7 +216,10 @@ return TA.Name
       class: `subheader-width subheader-color2`,
       html: `NetID: ${student.NetID}`
     }), $('<div/>', {
-      class: `subheader-color2 ${hidden}`,
+      class: 'attendance-status attendance-unknown',
+      text: 'Attendance: N/A'
+    }), $('<div/>', {
+      class: `subheader-color2 ${hidden} ${student.Warning ? "" : "hide"}`,
       html: `Warning: ${student.Warning}`
     })
 
@@ -210,8 +228,49 @@ return TA.Name
 );
 
     this.addToParentById(groupID /* parent container */, studDivs);
+    $('#content').trigger('request:group-attendance', [this.userInfo.NetID, groupID, groupInfo]);
     $(`.student`).click(evt => this.handleClickEvent(evt)); 
 }
+
+  /* Updates the attendance indicator on a student tile */
+  updateAttendanceStatus (studentID, value) {
+    var status = value || "N/A";
+    var label = {
+      "Present": "Present",
+      "Absent": "Absent",
+      "+10min_late": "Late"
+    }[status] || "N/A";
+    var statusElem = $(document.getElementById(studentID)).find('.attendance-status');
+    statusElem.text(`Attendance: ${label}`)
+      .removeClass('attendance-present attendance-absent attendance-late attendance-unknown')
+      .addClass({
+        "Present": "attendance-present",
+        "Absent": "attendance-absent",
+        "+10min_late": "attendance-late"
+      }[status] || 'attendance-unknown');
+  }
+
+  finishMarkAllPresent (groupID) {
+    var groupElement = $(document.getElementById(groupID));
+    groupElement.find('.attendance-status')
+      .text('Attendance: Present')
+      .removeClass('attendance-unknown attendance-absent attendance-late')
+      .addClass('attendance-present');
+  }
+
+  /* Refreshes the attendance indicators for the group currently on screen */
+  refreshOpenGroupAttendance () {
+    var groupElement = $('.selected-group').first();
+    if (groupElement.length == 0) { return; }
+
+    var groupID = groupElement.attr('id');
+    var groupInfo = this.studInfo.filter(group =>
+      group.length > 0 && group[0].Group == groupID
+    )[0];
+    if (groupInfo) {
+      $('#content').trigger('request:group-attendance', [this.userInfo.NetID, groupID, groupInfo]);
+    }
+  }
 
 
   //* Displays student questionnaire form */
@@ -611,6 +670,7 @@ clickedItem.off("click");
 
         // notify TAHelper that a student has been selected
         let groupID = $(clickedItem.parent()[0]).attr("id");
+        $(document.getElementById(groupID)).find('.attendance-button').hide();
         $("#content").trigger('request:student-eval', [this.userInfo.NetID, groupID, clickedID]);
         break
      default:
