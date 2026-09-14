@@ -42,7 +42,7 @@ if (!is_string($course) || !is_array($user)) {
   <div id="left-menu" class="menu"></div>
   <div id="right-menu" class="menu"></div>
   <div id="header">TAHelper</div>
-  <div id="content" class="flexContainer"></div>
+  <main id="content" class="flexContainer"></main>
 </body>
 
 </html>

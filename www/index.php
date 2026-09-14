@@ -128,7 +128,7 @@ if (count($courses) === 1) {
     </style>
 </head>
 <body>
-    <div class="course-shell">
+    <main class="course-shell">
         <h1>TAHelper</h1>
         <p class="sub">Choose a course.</p>
         <?php if (!$courses): ?>
@@ -141,6 +141,6 @@ if (count($courses) === 1) {
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>
-    </div>
+    </main>
 </body>
 </html>

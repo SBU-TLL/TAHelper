@@ -32,7 +32,8 @@ class TAHelperUI {
       waitingOnSavePrompt: false,
       waitingOnClearPrompt: false,
       enableGroupEvaluations: false,
-      selectedStudents: []
+      selectedStudents: [],
+      selectionLocked: false
     };
   }
 
@@ -41,7 +42,7 @@ class TAHelperUI {
   setWaitingOnSavePrompt (val) { this.state.waitingOnSavePrompt = val; }
   setWaitingOnClearPrompt (val) { this.state.waitingOnClearPrompt = val; }
   setEnableGroupEvaluations (val) { this.state.enableGroupEvaluations = val; }
-  clearSelectingStudents (val) { this.state.selectedStudents = []; }
+  clearSelectedStudents () { this.state.selectedStudents = []; }
 
   /* Handles any necessary UI updates according to changes in state */
   updateState() {
@@ -58,6 +59,7 @@ class TAHelperUI {
   /* Add menu options to the top of the page */
   initMenu() {
     this.addBackBtn();
+    //if(this.isAdmin) this.addAdminBtn();
     this.addDropdownMenu();
   }
 
@@ -170,23 +172,31 @@ return TA.Name
       this.hideGroupEvalLink(groupID);
     }
     var groupElement = document.getElementById(groupID);
-    var attendanceButton = $('<button/>', {
-      class: 'attendance-button',
-      text: 'Mark all present'
+    var editButton = $('<button/>', {
+      class: 'student group-button',
+      id: `edit-students`,
+      'data-group-id': groupID,
+      text: 'Edit Selected',
+      disabled: (this.state.selectedStudents.length == 0)
     }).click(evt => {
       evt.stopPropagation();
-      if(this.state.selectedStudents.length > 0) {
-        $('#content').trigger('request:mark-all-present', [this.userInfo.NetID, groupID, groupInfo, this.state.selectedStudents]);
-      }else{
-        $('#content').trigger('request:mark-all-present', [this.userInfo.NetID, groupID, groupInfo, null]);
+      this.handleClickEvent(evt);
+    });
+    var invertButton = $('<button/>', {
+      class: 'group-button',
+      text: 'Invert Selection'
+    }).click(evt => {
+      evt.stopPropagation();
+      for (var student of groupInfo) {
+        this.handleStudentSelection(student.NetID);
       }
     });
-    var attendanceToolbar = $('<div/>', {
-      class: 'attendance-toolbar'
-    }).append(attendanceButton);
-    $(groupElement).find('.attendance-toolbar').remove();
+    var groupToolbar = $('<div/>', {
+      class: 'group-toolbar'
+    }).append(invertButton, editButton);
+    $(groupElement).find('.group-toolbar').remove();
     var groupHeader = $(groupElement).find('.header-width').first();
-    (groupHeader.length ? groupHeader : $(groupElement)).append(attendanceToolbar);
+    (groupHeader.length ? groupHeader : $(groupElement)).append(groupToolbar);
 
     var hidden="";
     //if(this.userRole.includes("Facil")){
@@ -194,7 +204,10 @@ return TA.Name
     //}
     var studDivs = groupInfo.map(student => $('<div/>', {
       id: `${student.NetID}`,
-      class: `student subcard-item flexChildren`,
+      class: `student subcard-item flexChildren ${this.state.selectedStudents.includes(student.NetID) ? "selected" : ""}`,
+    }).click(evt => {
+      evt.stopPropagation();
+      this.handleStudentSelection(student.NetID);
     }).append($('<img/>', {
       class: `profile`,
       id: `${student.NetID}_img`,
@@ -204,7 +217,7 @@ return TA.Name
       src: `photo.php?f=${encodeURIComponent(`${student.Name},${student.SID}.jpg`)}`,
       'data-photo': `${student.Name},${student.SID}.jpg`,
       onload: () => this.handleImageLoaded(),
-      alt: `Image of ${student.Name}`
+      alt: `Profile Image of ${student.Name}`
       // onerror: `this.src='images/no-image-available.jpg'` // alt image if none found
     }).click(evt => {this.handleClickEvent(evt)} )
     ,$('<label/>', {
@@ -225,26 +238,9 @@ return TA.Name
       class: 'attendance-status attendance-unknown',
       text: 'Attendance: N/A'
     }), $('<div/>', {
-      class: `subheader-color2 ${hidden} ${student.Warning ? "" : "hide"}`,
+      class: `subheader-color2 ${hidden} ${student.Warning && student.Warning != "Ok" ? "" : "hide"}`,
       html: `Warning: ${student.Warning}`
-    }), $('<div/>', {
-      class: 'student-buttons'
-      }).append($('<button/>', {
-        id: `select_${student.NetID}`,
-        class: 'selection-button',
-        text: 'Select'
-      }).click(evt => {
-        evt.stopPropagation();
-        this.handleStudentSelection(student.NetID);
-      }).attr("aria-label","Select " + student.Name),
-      $('<button/>', {
-        id: `${student.NetID}_view`,
-        class: 'student selection-button',
-        text: 'View'
-      }).click(evt => {
-        evt.stopPropagation();
-        this.handleClickEvent(evt);
-      }).attr("aria-label","View details for " + student.Name))
+    })
 
 
    ))//.click(evt => this.handleClickEvent(evt))
@@ -273,34 +269,18 @@ return TA.Name
       }[status] || 'attendance-unknown');
   }
 
-  finishMarkAllPresent (groupID) {
-    var groupElement = $(document.getElementById(groupID));
-    groupElement.find('.attendance-status')
-      .text('Attendance: Present')
-      .removeClass('attendance-unknown attendance-absent attendance-late')
-      .addClass('attendance-present');
-  }
-
-  /* Refreshes the attendance indicators for the group currently on screen */
-  refreshOpenGroupAttendance () {
-    var groupElement = $('.selected-group').first();
-    if (groupElement.length == 0) { return; }
-
-    var groupID = groupElement.attr('id');
-    var groupInfo = this.studInfo.filter(group =>
-      group.length > 0 && group[0].Group == groupID
-    )[0];
-    if (groupInfo) {
-      $('#content').trigger('request:group-attendance', [this.userInfo.NetID, groupID, groupInfo]);
-    }
-  }
 
 
   //* Displays student questionnaire form */
-  showStudForm (template, studentID) {
-    // TODO: group evaluation div takes a while to disappear
+  showStudForm (template, studentID, groupID=null, studentIDs=null) {
     $('#group-evaluation-div').remove();
-    this.addToParentById(studentID, this.makeForm("student", template));
+    var form = this.makeForm("student", template);
+    if (studentIDs && studentIDs.length > 1) {
+      form.addClass('student-form');
+      this.addToParentById(groupID, form);
+    } else {
+      this.addToParentById(studentID, form);
+    }
   }
 
 
@@ -488,13 +468,13 @@ return TA.Name
       class: 'modal'
     }).append($('<div/>', {
       class: `modal-content ${(type.includes("confirm")) ? 'modal-content-short':''}`,
-    }).append(modalHeader, modalBody, modalFooter));
+    }).append(modalHeader, modalBody, modalFooter)).click(evt => {if (evt.target.id === `${type}-modal`) this.handleModalCloseRequest()});
 
     this.addToParentById('content' /* parent container */, modalDiv);
   }
 
   /* Constructs a selection modal */
-  makeSelectionModal (type, inputGroup, data) {
+  makeSelectionModal (type, inputGroup, data, header = "responses") {
     // console.log(type, data)
     var sectionID = `section-${inputGroup}`;
     var capitalizeType = type.charAt(0).toUpperCase() + type.slice(1);
@@ -506,7 +486,7 @@ return TA.Name
 
     var header = $('<label/>', {
       class: `modal-element-header`,
-      html: `${capitalizeType} responses from selected ${inputGroup}(s)`
+      html: `${capitalizeType} ${header} from selected ${inputGroup}(s)`
     });
 
     var selectAllInput = $('<input/>', {
@@ -618,6 +598,26 @@ return TA.Name
   /* Handles click event when a group is selected */
   handleClickEvent (evt) {
    let clickedItem=$(evt.currentTarget);
+   if(clickedItem.attr("class").includes("group-button")) {
+    if(clickedItem.attr("id") == "edit-students") {
+      let groupID = clickedItem.attr('data-group-id');
+      let selectedStudents = this.state.selectedStudents.slice();
+      if(selectedStudents.length > 1) {
+        this.state.selectionLocked = true;
+        $(`#${groupID}`).find('.student').filter((_, student) => { //Remove students not selected from view
+          return !selectedStudents.includes($(student).attr('id'));
+        }).remove();
+        $(`#${groupID}`).find('.student').addClass('edit-mode');
+        $(`#${groupID}`).find('.group-button').hide();
+        $("#content").trigger('request:student-eval', [this.userInfo.NetID, groupID, selectedStudents]);
+        return;
+      }
+      clickedItem = $(`#${selectedStudents[0]}`);
+    }else {
+      let student = $(".student.selected").first();
+      clickedItem = student;
+    }
+   }
     console.log(clickedItem);
     if(clickedItem.attr("class").includes("student selection-button")){ //get correct student div
       clickedItem = $(`#${clickedItem.attr("id").replace("_view","")}`);
@@ -696,10 +696,9 @@ clickedItem.off("click");
 
         // notify TAHelper that a student has been selected
         let groupID = $(clickedItem.parent()[0]).attr("id");
-        $(document.getElementById(groupID)).find('.attendance-button').hide();
+        $(document.getElementById(groupID)).find('.group-button').hide();
         $(document.getElementById(groupID)).find('.selection-button').hide();
-        this.clearSelectingStudents();
-        $('.student#' + clickedID).removeClass('selected');
+
         $("#content").trigger('request:student-eval', [this.userInfo.NetID, groupID, clickedID]);
         break
      default:
@@ -724,16 +723,18 @@ clickedItem.off("click");
       var selectedGroup = $('.selected-group');
       if (selectedGroup.length == 0) { // backing up from all groups to all sessions
         this.removeItemsByClass("session-group");
+        this.removeItemsByClass("admin");
+        this.clearSelectedStudents();
   	//this.showHomePage()
 	this.showSessions();
         this.hideBackBtn();
       } else {
 	 whichBack=2
         // check for group evluation form
-        var groupForm = $('.group-form');
+        var groupForm = $('.group-form, .student-form');
         if (groupForm.length == 0) { // backing up from selected group to all groups
           selectedGroup.remove();
-          this.clearSelectingStudents();
+          this.clearSelectedStudents();
 	 whichBack=2.1
           if (!this.isAdmin ) {
 	    whichBack=2.2
@@ -756,6 +757,8 @@ clickedItem.off("click");
           } else {
 		 whichBack=3.2
             groupForm.remove();
+            this.state.selectionLocked = false;
+            $(`#${selectedGrpID}`).find('.student').remove();
             this.showStudsInGroup(selectedGrpID);
           }
         }
@@ -804,7 +807,7 @@ console.log(whichBack)
 
     // add form details to data sent over to TAHelper
     var data = {"Details": null, "Response Data": changes};
-    var selected = ($('.selected-student').length > 0) ? $('.selected-student') : $('.selected-group');
+    var selected = ($('.selected-student').length > 0) ? $('.selected-student').first() : $('.selected-group');
     var selectedID = selected.attr("id");
     var formType = selected.attr("class").split(' ')[0];
 
@@ -822,6 +825,10 @@ console.log(whichBack)
     var evaluatorID = this.userInfo.NetID;
     if (formType == "student") {
       $('#content').trigger('request:save-eval', [formType, evaluatorID, groupID, selectedID, data]);
+    } else if ($('.student-form').length > 0) {
+      var studentIDs = this.state.selectedStudents.slice();
+      var multiGroupID = $('.student-form').parent().attr('id');
+      $('#content').trigger('request:save-eval', ["student", evaluatorID, multiGroupID, studentIDs, data]);
     } else { // session-group
       $('#content').trigger('request:save-eval', [formType, evaluatorID, selectedID, null, data]);
     }
@@ -840,24 +847,99 @@ console.log(whichBack)
   }
 
   handleStudentSelection(studentID) {
+    if (this.state.selectionLocked) { return; }
     var name = $(document.getElementById(studentID)).find('.subheader-width').first().html();
     if(this.state.selectedStudents.includes(studentID)) {
-      this.state.selectedStudents.pop(studentID);
+      this.state.selectedStudents.splice(this.state.selectedStudents.indexOf(studentID), 1);
       $('.student#' + studentID).removeClass('selected');
       $('.student#' + studentID).find('#select_' + studentID).text('Select').attr("aria-label","Select " + name);
-
-      if(this.state.selectedStudents.length == 0) {
-        $('.attendance-button').text('Mark all present');
-      }
     }else{
       this.state.selectedStudents.push(studentID);
       $('.student#' + studentID).addClass('selected');
       $('.student#' + studentID).find('#select_' + studentID).text('Selected').attr("aria-label","Deselect " + name);
-
-      if(this.state.selectedStudents.length == 1) {
-        $('.attendance-button').text('Mark selected present');
-      }
     }
+    $('#edit-students').prop("disabled", this.state.selectedStudents.length == 0);
+  }
+
+  handleAdminRequest() {
+    $("#content").empty();
+    this.showBackBtn();
+
+    var adminDivs = $('<div/>', {
+      id: `admin-info`,
+      class: `admin flexContainer admin-container`
+    }).append($('<div/>', {
+      class: `flexText header-font header-width`,
+      html: `Professor Dashboard`
+    }));
+
+    this.addToParentById("content" /* parent container */, adminDivs);
+
+    var questionTest = $('<div/>', {
+      class: `admin-content`
+    }).append($('<div/>', {
+      class: `flexText subheader-font`,
+      html: `Sample Question Here`,
+      style: `width: 100%`
+    }));
+
+    const questions = [
+      {
+            "Answer Choices": [
+                "Option A",
+                "Option B",
+                "Option C"
+            ],
+            "Question": "Question #1",
+            "Type": "SC"
+        },
+        {
+            "Answer Choices": [
+                "Option A",
+                "Option B",
+                "Option C"
+            ],
+            "Question": "Question #2",
+            "Type": "SC"
+        }
+    ]
+
+    questionTest.append($('<div/>', {
+      class: `admin-form`
+    }).append(this.makeForm("admin", questions)));
+
+    var questionTest2 = $('<div/>', {
+      class: `admin-content`
+    }).append($('<div/>', {
+      class: `flexText subheader-font`,
+      html: `Another Sample Question Here`,
+      style: `width: 100%`
+    }));
+
+    const questions2 = [
+      {
+            "Answer Choices": [
+                "Option 1",
+                "Option 2",
+                "Option 3"
+            ],
+            "Question": "Question A",
+            "Type": "MC"
+        }
+    ]
+    //load roster, assign roster, update images
+
+    questionTest2.append($('<div/>', {
+      class: `admin-form`
+    }).append(this.makeForm("admin", questions2)));
+
+    var questionDiv = $('<div/>', {
+      class: `admin-content`,
+      style: "flex-direction: row"
+    });
+    questionDiv.append(questionTest, questionTest2);
+
+    adminDivs.append(questionDiv);
   }
 
   /* Handles loading page visibility */
@@ -1063,6 +1145,10 @@ console.log(whichBack)
 
   /* Adds a dropdown menu to the page */
   addDropdownMenu() {
+    var drpdwnDiv = $('<div/>', {
+      class: 'dropdown'
+    });
+    this.addToParentById('content' /* parent container */, drpdwnDiv);
     var drpdwnBtn = $('<button/>', {
       id: 'dropdownBtn',
       class: `menu-button`,
@@ -1098,12 +1184,24 @@ console.log(whichBack)
       drpdwnMenu.append(downloadBtn);
     }
 
-    this.addToParentById('right-menu' /* parent container */, drpdwnBtn);
-    this.addToParentById('right-menu' /* parent container */, drpdwnMenu);
+    this.addToParentById('right-menu' /* parent container */, drpdwnDiv);
+    this.addToParentByClass('dropdown' /* parent container */, drpdwnBtn);
+    this.addToParentByClass('dropdown' /* parent container */, drpdwnMenu);
+  }
+
+  /* Adds an admin button to the top of the page */
+  addAdminBtn() {
+    var adminBtn = $('<button/>', { // initially hidden
+      id: 'adminBtn',
+      class: `menu-button`,
+      html: 'Dashboard'
+    }).click(evt => this.handleAdminRequest());
+
+    this.addToParentById('right-menu' /* parent container */, adminBtn);
   }
 
   /* Turns the loader visible or invisible  */
-  showLoader() { $(".loader").fadeIn('fast'); }
+  showLoader() {  }
   hideLoader() { $(".loader").fadeOut(); }
 
   /* Shows or hides the group evaluation link */

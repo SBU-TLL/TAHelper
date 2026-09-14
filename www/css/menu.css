@@ -12,6 +12,7 @@ button.menu-button {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  z-index: 10;
 }
 
 button.menu-button:hover,
@@ -32,9 +33,11 @@ div#left-menu {
 
 div#right-menu {
   right: 18px;
+  display: flex;
+  justify-content: flex-end;
 }
 
-div#right-menu:hover .dropdown-content {
+div.dropdown:hover .dropdown-content {
   display: block;
 }
 

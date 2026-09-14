@@ -48,10 +48,6 @@ class TAHelper {
           this.updateForm(formType, evaluatorID, groupID, studentID, data);
         });
 
-        $('#content').on('request:mark-all-present', (evt, evaluatorID, groupID, students, ids) => {
-          this.markAllPresent(evaluatorID, groupID, students, ids);
-        });
-
         $('#content').on('request:group-attendance', (evt, evaluatorID, groupID, students) => {
           this.loadGroupAttendance(evaluatorID, groupID, students);
         });
@@ -80,26 +76,23 @@ class TAHelper {
     });
   }
 
-  /* Updates only the attendance answer while preserving the rest of each form */
-  markAllPresent (evaluatorID, groupID, students, ids) {
-    students.map(student => {
-      if(ids != null && !ids.includes(student.NetID)) return;
-      var filename = `${evaluatorID}_${groupID}_${student.NetID}`;
-      var url = `evaluationInfo.php?type=student&date=${this.getCurrentDate()}&filename=${filename}`;
-      this.ui.updateAttendanceStatus(student.NetID, 'Present');
-      return $.getJSON(url).then(form => {
-        form[0].Value = 'Present';
-        return $.post(url, {data: {
-          Details: {"Student Name": student.Name},
-          "Response Data": form.map(question => question.Value || "")
-        }});
-      });
-    });
-  }
-
 
   /* Initializes or retrieves a new or existing form */
   loadForm (type, evaluatorID=null, groupID=null, studentID=null) {
+    var studentIDs = (type == "student" && Array.isArray(studentID)) ? studentID : null; //Check for multiple students
+    if (studentIDs && studentIDs.length > 1) { //Load default template
+      var templateFilename = `${evaluatorID}_${groupID}___default__`;
+      var templateUrl = `evaluationInfo.php?type=student&date=${this.getCurrentDate()}&filename=${templateFilename}`;
+      this.ui.showLoader();
+      $.getJSON(templateUrl).done(result => {
+        this.ui.hideLoader();
+        this.ui.showStudForm(result, null, groupID, studentIDs);
+      });
+      return;
+    }
+    if (studentIDs) { //Format back to single student
+      studentID = studentIDs[0];
+    }
     var datetime = this.getCurrentDate();
     var filename = (type == "student") ? `${evaluatorID}_${groupID}_${studentID}` : `${evaluatorID}_${groupID}`;
     var url = `evaluationInfo.php?type=${type}&date=${datetime}&filename=${filename}`;
@@ -127,18 +120,35 @@ class TAHelper {
   /* Post updated form results to the appropriate file in database */
   updateForm (type, evaluatorID=null, groupID=null, studentID=null, data) {
     var datetime = this.getCurrentDate();
-    var filename = (type == "student") ? `${evaluatorID}_${groupID}_${studentID}` : `${evaluatorID}_${groupID}`;
-    var url = `evaluationInfo.php?type=${type}&date=${datetime}&filename=${filename}`;
-
-    $.post(url, {data: data}).done(() => {
-      if(type == "student") {
-        this.ui.updateAttendanceStatus(studentID, data["Response Data"][0]);
+    var studentIDs = (type == "student" && Array.isArray(studentID)) ? studentID : [studentID]; //Format to array
+    var requests = studentIDs.map(currentStudentID => {
+      var filename = (type == "student") ? `${evaluatorID}_${groupID}_${currentStudentID}` : `${evaluatorID}_${groupID}`;
+      var url = `evaluationInfo.php?type=${type}&date=${datetime}&filename=${filename}`;
+      var studentData = {
+        ...data,
+        "Details": {
+          ...data.Details,
+          "Student Name": this.getStudentName(currentStudentID)
+        }
       }
+      return $.post(url, {data: studentData}).done(() => {
+        if(type == "student") {
+          this.ui.updateAttendanceStatus(currentStudentID, data["Response Data"][0]);
+        }
+      });
+    });
+
+    $.when.apply($, requests).done(() => {
       this.ui.setHasUnsavedChanges(false);
       this.ui.updateState();
     }).fail(() => {
       console.log("Failed to update form");
     });
+  }
+
+  getStudentName (studentID) {
+    var student = this.ui.studInfo.flat().find(stud => stud.NetID == studentID);
+    return student ? student.Name : "";
   }
 
 
@@ -165,7 +175,6 @@ class TAHelper {
     var url = `responseInfo.php?request=clear&type=${type}`;
     $.post(url, {data: data}).done(() => {
       // TODO: show some sort of alert to user that request was completed
-      this.ui.refreshOpenGroupAttendance();
       console.log("done")
     });
   }
