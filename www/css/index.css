@@ -56,6 +56,8 @@ div.admin-form {
   justify-content: center;
   align-items: start;
   width: 100%;
+  padding-bottom: 10px;
+  padding-top: 10px;
 }
 
 .admin-form-button {
@@ -224,6 +226,15 @@ div.attendance-unknown {
   background: #e2e8f0;
 }
 
+div.attendance-bar {
+  display: flex;
+  width: 100%;
+  height: 20px;
+  border-radius: 16px;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
 form {
   width: 100%;
 }
@@ -337,6 +348,7 @@ img.profile {
 
 img.profile-left {
   margin: 10px 30px;
+  cursor: pointer;
 }
 
 .header-width {
@@ -436,14 +448,6 @@ label#no-students-label {
   font-weight: 700;
 }
 
-label#form-saved-label {
-  display: block;
-  margin: auto;
-  margin-top: 12px;
-  font-style: italic;
-  color: var(--sbu-dark-red);
-}
-
 a#group-evaluation-link {
   color: var(--sbu-dark-red);
   text-decoration: none;
@@ -453,4 +457,19 @@ a#group-evaluation-link {
 a#group-evaluation-link:hover,
 a#group-evaluation-link:focus {
   text-decoration: underline;
+}
+
+.roster-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.form-saved-text {
+  display: block;
+  margin: auto;
+  margin-top: 12px;
+  font-style: italic;
+  color: var(--sbu-dark-red);
 }

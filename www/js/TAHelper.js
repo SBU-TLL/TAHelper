@@ -52,6 +52,11 @@ class TAHelper {
           this.loadGroupAttendance(evaluatorID, groupID, students);
         });
 
+        // install an event listener to be triggered when a group attendance request is made
+        $('#content').on('request:group-attendance-percent', (evt, evaluatorID, groupID, students) => {
+          this.loadAttendancePercent(evaluatorID, groupID, students);
+        });
+
         // install an event listener to be triggered when a download request is made
         $('#content').on('request:download-eval', (evt, dataType, data) => {
           // console.log(dataType, data);
@@ -63,7 +68,30 @@ class TAHelper {
           // console.log(dataType, data);
           this.clearResponses(dataType, data);
         });
+
+        // install an event listener to be triggered when a roster load request is made
+        $('#content').on('request:admin-load-roster', (evt, file) => {
+          this.loadRoster(file);
+        });
+
+        // install an event listener to be triggered when a roster assign request is made
+        
       });
+    });
+  }
+
+  loadRoster(file) {
+    this.ui.showLoader();
+
+    var formData = new FormData();
+    formData.append('roster', file);
+    $.ajax({url: 'roster.php', method: 'POST', data: formData, processData: false, contentType: false})
+    .done(() => {
+      this.ui.hideLoader();
+      this.ui.showSavedLabel('load');
+    }).fail(xhr => {
+      this.ui.hideLoader();
+      alert(xhr.responseText || 'The roster could not be loaded.');
     });
   }
 
@@ -76,6 +104,25 @@ class TAHelper {
     });
   }
 
+  /* Loads attendance percentage for a group */
+  loadAttendancePercent (evaluatorID, groupID, students) {
+    var total = students.length;
+    var attendance = {'Present': 0, 'Absent': 0, '+10min_late': 0, 'Unknown': total, 'Total': total};
+
+    var requests = students.map(student => {
+      var filename = `${evaluatorID}_${groupID}_${student.NetID}`;
+      return $.getJSON(`evaluationInfo.php?type=student&date=${this.getCurrentDate()}&filename=${filename}`)
+        .done(form => {
+          if(form[0] && form[0].Value) {
+            attendance[form[0].Value]++;
+            attendance['Unknown']--;
+          }
+        });
+    })
+    Promise.all(requests).then(() => {
+      this.ui.updateAttendancePercent(groupID, attendance);
+    });
+  }
 
   /* Initializes or retrieves a new or existing form */
   loadForm (type, evaluatorID=null, groupID=null, studentID=null) {

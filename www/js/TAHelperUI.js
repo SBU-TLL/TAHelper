@@ -59,7 +59,8 @@ class TAHelperUI {
   /* Add menu options to the top of the page */
   initMenu() {
     this.addBackBtn();
-    //if(this.isAdmin) this.addAdminBtn();
+    this.addHomeBtn();
+    if(this.isAdmin) this.addAdminBtn();
     this.addDropdownMenu();
   }
 
@@ -120,23 +121,31 @@ class TAHelperUI {
   // whose code happens to contain it. See git history if that mapping is ever
   // wanted back — it belongs in the course's own data, not in the UI.
   groups = groups.sort(function(a, b){return a - b})
-    var groupDivs = groups.map(groupID => $('<div/>', {
-      id: `${groupID}`,
-      class: `session-group card-item flexChildren`
-    }).append($('<div/>', {
-      class: `flexText subheader-font subheader-color1`,
-      html: `Section ${groupID.split('-')[0]}`
-    }), $('<div/>', {
-      class: `flexText header-font`,
-      html: `Group ${groupID.split('-')[1]}`
-    }), $('<div/>', {
-      class: `flexText ta-font`,
-      html: `TA: ${this.getTAfromGroupID(groupID)}`
-     }),$('<div/>')
 
-     ).click(evt => this.handleClickEvent(evt)));
+    var groupDivs = groups.map(groupID => $('<div/>', {
+        id: `${groupID}`,
+        class: `session-group card-item flexChildren`
+      }).append($('<div/>', {
+        class: `flexText subheader-font subheader-color1`,
+        html: `Section ${groupID.split('-')[0]}`
+      }), $('<div/>', {
+        class: `flexText header-font`,
+        html: `Group ${groupID.split('-')[1]}`
+      }), $('<div/>', {
+        class: `flexText ta-font`,
+        html: `TA: ${this.getTAfromGroupID(groupID)}`
+      }), $('<div/>', {
+        class: `attendance-bar`
+      }),$('<div/>')
+
+      ).click(evt => this.handleClickEvent(evt))
+    );
 
     this.addToParentById("content" /* parent container */, groupDivs);
+    groups.map(groupID => {
+      var groupInfo = this.studInfo.filter(grp => grp.length > 0 && grp[0].Group == groupID)[0];
+      $('#content').trigger('request:group-attendance-percent', [this.userInfo.NetID, groupID, groupInfo]);
+    })
   }
   getTAfromGroupID(groupID){
 console.log(this.TAInfo["nkdean"])
@@ -159,10 +168,10 @@ return TA.Name
       this.showNoStudLabel(groupID);
       return;
     }
-
+    $(document.getElementById(groupID)).find('.attendance-bar').hide();
     // hide contents until student images have all been loaded in
     this.state.imagesToLoad = groupInfo.length;
-    this.showLoader();
+    //this.showLoader();
 
     // include link to group evaluation form
     if (this.state.enableGroupEvaluations) {
@@ -207,6 +216,12 @@ return TA.Name
       class: `student subcard-item flexChildren ${this.state.selectedStudents.includes(student.NetID) ? "selected" : ""}`,
     }).click(evt => {
       evt.stopPropagation();
+      if(evt.detail == 2) {
+        this.clearSelectedStudents();
+        this.handleStudentSelection(student.NetID);
+        this.handleClickEvent(evt);
+        return;
+      }
       this.handleStudentSelection(student.NetID);
     }).append($('<img/>', {
       class: `profile`,
@@ -269,7 +284,20 @@ return TA.Name
       }[status] || 'attendance-unknown');
   }
 
-
+  updateAttendancePercent(groupID, attendance) {
+    var barElem = $(document.getElementById(groupID)).find('.attendance-bar');
+    var total = attendance['Total'] || 0;
+    if (total === 0) {
+        barElem.html('<div style="width: 100%; background-color: #475569; height: 100%;"></div>');
+        return;
+    }
+    barElem.html('').append(
+        $('<div/>', { style: `width: ${(attendance['Present'] / total) * 100}%; background-color: #14532d; height: 100%` }),
+        $('<div/>', { style: `width: ${(attendance['Absent'] / total) * 100}%; background-color: #991b1b; height: 100%` }),
+        $('<div/>', { style: `width: ${(attendance['+10min_late'] / total) * 100}%; background-color: #854d0e; height: 100%` }),
+        $('<div/>', { style: `width: ${(attendance['Unknown'] / total) * 100}%; background-color: #b9bec5; height: 100%` })
+    );
+}
 
   //* Displays student questionnaire form */
   showStudForm (template, studentID, groupID=null, studentIDs=null) {
@@ -310,6 +338,7 @@ return TA.Name
     }).click(evt => this.handleSaveRequest()),
     $('<label/>', { // initially hidden until user saves form
       id: `form-saved-label`,
+      class: `form-saved-text`,
       for: `form-save-button`,
       html: `All changes have been saved.`
     }).hide(), );
@@ -505,6 +534,22 @@ return TA.Name
     switch (inputGroup) {
       case "all":
         // TODO: add option to download group responses
+        if(type == "download") {
+          var clearInput = $('<input/>', {
+            id: `${sectionID}-option-clear`,
+            type: `checkbox`,
+            name: `${sectionID}`,
+          });
+          var clearLabel = $('<label/>', {
+            for: `${sectionID}-option-clear`,
+            html: `Clear responses after downloading`
+          });
+          var clearAll = $('<div/>', {
+            id: `${sectionID}-clear`,
+          }).append(clearInput, clearLabel);
+          return modalElem.append(selectAll, clearAll);
+        }
+
         return modalElem.append(selectAll);
       case "evaluator":
         var evaluators = data.map(ta => {
@@ -832,6 +877,7 @@ console.log(whichBack)
     } else { // session-group
       $('#content').trigger('request:save-eval', [formType, evaluatorID, selectedID, null, data]);
     }
+    $("#form-saved-label").show();
   }
 
 
@@ -863,83 +909,114 @@ console.log(whichBack)
 
   handleAdminRequest() {
     $("#content").empty();
-    this.showBackBtn();
+    this.hideBackBtn();
+    this.showHomeBtn();
 
     var adminDivs = $('<div/>', {
       id: `admin-info`,
       class: `admin flexContainer admin-container`
     }).append($('<div/>', {
       class: `flexText header-font header-width`,
+      
       html: `Professor Dashboard`
+    })).append($('<div/>', {
+      class: `flexText body-font`,
+      html: `Below are settings for the course. Please note, all changes will override existing configurations and data.`
     }));
 
     this.addToParentById("content" /* parent container */, adminDivs);
-
-    var questionTest = $('<div/>', {
-      class: `admin-content`
-    }).append($('<div/>', {
-      class: `flexText subheader-font`,
-      html: `Sample Question Here`,
-      style: `width: 100%`
-    }));
-
-    const questions = [
-      {
-            "Answer Choices": [
-                "Option A",
-                "Option B",
-                "Option C"
-            ],
-            "Question": "Question #1",
-            "Type": "SC"
-        },
-        {
-            "Answer Choices": [
-                "Option A",
-                "Option B",
-                "Option C"
-            ],
-            "Question": "Question #2",
-            "Type": "SC"
-        }
-    ]
-
-    questionTest.append($('<div/>', {
-      class: `admin-form`
-    }).append(this.makeForm("admin", questions)));
-
-    var questionTest2 = $('<div/>', {
-      class: `admin-content`
-    }).append($('<div/>', {
-      class: `flexText subheader-font`,
-      html: `Another Sample Question Here`,
-      style: `width: 100%`
-    }));
-
-    const questions2 = [
-      {
-            "Answer Choices": [
-                "Option 1",
-                "Option 2",
-                "Option 3"
-            ],
-            "Question": "Question A",
-            "Type": "MC"
-        }
-    ]
-    //load roster, assign roster, update images
-
-    questionTest2.append($('<div/>', {
-      class: `admin-form`
-    }).append(this.makeForm("admin", questions2)));
 
     var questionDiv = $('<div/>', {
       class: `admin-content`,
       style: "flex-direction: row"
     });
-    questionDiv.append(questionTest, questionTest2);
+
+    const options = [
+      {
+        "id": "load",
+        "label": "Load Roster",
+        "description": "Load the latest roster into TAHelper.",
+        "button": "Upload"
+      },
+      {
+        "id": "assign",
+        "label": "Assign Roster",
+        "description": "Drag students and TAs to their respective groups.",
+        "button": "Assign"
+      },
+      {
+        "id": "images",
+        "label": "Upload Images",
+        "description": "Upload student images to TAHelper.",
+        "button": "Upload"
+      }
+    ]
+
+    options.forEach(option => {
+      var optionDiv = $('<div/>', {
+        class: `admin-content`
+      }).append($('<div/>', {
+        class: `flexText subheader-font`,
+        html: `${option.label}`,
+        style: `width: 100%`
+      })).append($('<div/>', {
+        class: `flexText body-font`,
+        html: `${option.description}`,
+        style: `width: 100%`
+      }));
+
+      var saveDiv = $('<div/>', {
+        id: `form-save-div`
+      });
+      if (option.id === 'load') {
+          var rosterInput = $('<input/>', {type: 'file', id: 'roster-file', accept: '.csv,text/csv', style: 'display: none'});
+          rosterInput.change(evt => {
+            var file = evt.currentTarget.files[0];
+            if (file) $('#content').trigger('request:admin-load-roster', [file]);
+            evt.currentTarget.value = '';
+          });
+          saveDiv.append(rosterInput);
+      }
+      saveDiv.append($('<button/>', {
+        id: `admin-${option.id}`,
+        class: `menu-button`,
+        html: `${option.button}`
+      }).click(evt => this.handleAdminSaveRequest(option.id)),
+      $('<div/>', {
+        id: `form-saved-${option.id}`,
+        class: `form-saved-text`,
+        for: `admin-${option.id}`,
+        html: `All changes have been saved.`
+      }).hide(),);
+
+      optionDiv.append(saveDiv);
+      questionDiv.append(optionDiv);
+    });
+
+    //load roster, assign roster, update images
 
     adminDivs.append(questionDiv);
+  }
+
+  handleAdminSaveRequest(option) {
+    switch (option) {
+      case "load":
+        $('#roster-file').trigger('click');
+        break;
+      case "assign":
+        $('#content').trigger('request:admin-assign-roster', [this.userInfo.NetID]);
+        break;
+      case "images":
+        $('#content').trigger('request:admin-upload-images', [this.userInfo.NetID]);
+        break;
+      default:
+        console.log("Unknown admin option: ", option)
+        return;
+    }
+  }
+
+  handleAdminHome() {
+    window.location.reload();
   }
 
   /* Handles loading page visibility */
@@ -966,12 +1043,22 @@ console.log(whichBack)
           var data = {"Evaluators": [this.userInfo.NetID], "Groups": null};
 
           // prioritize select all options that are checked
-          var checkedAll = $(`input[type=checkbox][name=section-all]:checked`);
+          var checkedAll = $(`#section-all-option-all:checked`);
           if (checkedAll.length > 0) {
+            var clearAfter = modalType == "download" && ($('#section-all-option-clear:checked').length > 0);
+            console.log('clearAfter '+clearAfter);
             if (this.isAdmin) {
               $('#content').trigger(`request:${modalType}-eval`, ["all", null]);
+              if(clearAfter) {
+                $('#content').trigger(`request:clear-eval`, ["all", null]);
+                $('#download-modal .modal-message').text("Successfully cleared responses.")
+              }
             } else {
               $('#content').trigger(`request:${modalType}-eval`, ["mix", data]);
+              if(clearAfter) {
+                $('#content').trigger(`request:clear-eval`, ["mix", data]);
+                $('#download-modal .modal-message').text("Successfully cleared responses.")
+              }
             }
             break;
           }
@@ -1070,6 +1157,9 @@ console.log(whichBack)
     var inputGroup = inputElem.name;
     var isChecked = inputElem.checked;
     // console.log(inputElem, optionClass, inputGroup, isChecked)
+    if(inputGroup == "section-all") {
+      return;
+    }
     switch (optionClass) {
       case null: // select all option
         if (inputGroup.includes("session-group")) {
@@ -1143,6 +1233,16 @@ console.log(whichBack)
     this.addToParentById('left-menu' /* parent container */, backBtn);
   }
 
+  addHomeBtn() {
+    var homeBtn = $('<button/>', { // initially hidden
+      id: 'homeBtn',
+      class: `menu-button`,
+      html: 'Home'
+    }).click(evt => this.handleAdminHome()).hide();
+
+    this.addToParentById('left-menu' /* parent container */, homeBtn);
+  }
+
   /* Adds a dropdown menu to the page */
   addDropdownMenu() {
     var drpdwnDiv = $('<div/>', {
@@ -1201,7 +1301,7 @@ console.log(whichBack)
   }
 
   /* Turns the loader visible or invisible  */
-  showLoader() {  }
+  showLoader() { $(".loader").fadeIn('fast'); }
   hideLoader() { $(".loader").fadeOut(); }
 
   /* Shows or hides the group evaluation link */
@@ -1218,11 +1318,16 @@ console.log(whichBack)
   }
 
   /* Notifies the user that form has been saved to database */
-  showSavedLabel() { $("#form-saved-label").show(); }
+  showSavedLabel(option) {
+    $(`#form-saved-${option}`).show();
+  }
 
   /* Turns back button visible or invisible */
   showBackBtn() { $('#backBtn').show(); }
   hideBackBtn() { $('#backBtn').hide(); }
+
+  showHomeBtn() { $('#homeBtn').show(); }
+  hideHomeBtn() { $('#homeBtn').hide(); }
 
   /* Turns left menu button visible or invisible */
   showDropdownBtn() { $('#dropdownBtn').show(); }
