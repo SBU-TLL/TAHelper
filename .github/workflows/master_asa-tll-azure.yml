@@ -55,6 +55,5 @@ jobs:
         id: deploy-to-webapp
         with:
           app-name: 'asa-tll-azure'
-          slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_2CA436C65BBF4F33AAC20867354B860C }}
