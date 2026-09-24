@@ -292,9 +292,9 @@ return TA.Name
         return;
     }
     barElem.html('').append(
-        $('<div/>', { style: `width: ${(attendance['Present'] / total) * 100}%; background-color: #14532d; height: 100%` }),
-        $('<div/>', { style: `width: ${(attendance['Absent'] / total) * 100}%; background-color: #991b1b; height: 100%` }),
-        $('<div/>', { style: `width: ${(attendance['+10min_late'] / total) * 100}%; background-color: #854d0e; height: 100%` }),
+        $('<div/>', { style: `width: ${(attendance['Present'] / total) * 100}%; background-color: #208347; height: 100%` }),
+        $('<div/>', { style: `width: ${(attendance['Absent'] / total) * 100}%; background-color: #c42222; height: 100%` }),
+        $('<div/>', { style: `width: ${(attendance['+10min_late'] / total) * 100}%; background-color: #c57317; height: 100%` }),
         $('<div/>', { style: `width: ${(attendance['Unknown'] / total) * 100}%; background-color: #b9bec5; height: 100%` })
     );
 }
@@ -1004,7 +1004,7 @@ console.log(whichBack)
         $('#roster-file').trigger('click');
         break;
       case "assign":
-        $('#content').trigger('request:admin-assign-roster', [this.userInfo.NetID]);
+        this.showRosterAssignment();
         break;
       case "images":
         $('#content').trigger('request:admin-upload-images', [this.userInfo.NetID]);
@@ -1017,6 +1017,130 @@ console.log(whichBack)
 
   handleAdminHome() {
     window.location.reload();
+  }
+
+  showRosterAssignment() {
+    const students = this.studInfo.flat();
+    //sorted list of unique groups
+    const groups = Array.from(new Set([
+      ...this.userInfo.Group,
+      ...students.map(student => student.Group)
+    ])).sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+    //create mapping of undergrad tas and their assigned groups
+    const facilitators = Object.values(this.TAInfo)
+      .filter(ta => ta.Type === ROLES.UGTA)
+      .map(ta => ({netID: ta.NetID, name: ta.Name, groups: Array.isArray(ta.Group) ? ta.Group.slice() : []}));
+    //iniitalize assignment object with current student and TA assignments
+    const assignment = {
+      students: Object.fromEntries(students.map(student => [student.NetID, student.Group])),
+      tas: Object.fromEntries(facilitators.map(ta => [ta.netID, ta.groups.slice()]))
+    };
+
+    //construct modal
+    const modal = $('<div/>', {id: 'assign-roster-modal', class: 'modal'});
+    const content = $('<div/>', {class: 'modal-content assign-roster-content'});
+    const header = $('<div/>', {class: 'modal-header', text: 'Assign Roster'})
+      .append($('<span/>', {class: 'modal-close-button', html: '&times;'}).click(() => modal.remove()));
+    const body = $('<div/>', {class: 'modal-body assign-roster-body'});
+    const footer = $('<div/>', {class: 'modal-footer'})
+      .append($('<button/>', {class: 'modal-request-button', text: 'Cancel'}).click(() => modal.remove()))
+      .append($('<button/>', {class: 'modal-request-button', text: 'Save Changes'}).click(() => {
+        $('#content').trigger('request:admin-save-roster', [assignment]);
+        modal.remove();
+      }));
+    //available tas
+    const taList = $('<div/>', {class: 'assign-roster-options'})
+      .append($('<div/>', {class: 'assign-roster-option-title', text: 'Undergraduate TAs'}));
+    const sectionColumns = $('<div/>', {class: 'assign-roster-sections'});
+    //draggable students & tas
+    const studentCard = student => $('<div/>', {
+      class: 'assign-roster-person', text: student.Name,
+      'data-netid': student.NetID, 'data-person-type': 'student'
+    }).prop('draggable', true).append($('<small/>', {text: student.NetID}));
+    const taCard = (ta, sourceGroup = null) => $('<div/>', {
+      class: 'assign-roster-person assign-roster-ta', text: ta.name,
+      'data-netid': ta.netID, 'data-person-type': 'ta', 'data-source-group': sourceGroup || ''
+    }).prop('draggable', true).append($('<small/>', {text: ta.netID}));
+    facilitators.forEach(ta => taList.append(taCard(ta)));
+
+    const refresh = () => {
+      sectionColumns.empty();
+      //get each section
+      const sections = Array.from(new Set(groups.map(groupID => groupID.split('-')[0])));
+      sections.forEach(sectionID => {
+        const sectionGroups = $('<div/>', {class: 'assign-roster-groups'});
+        //populate the group
+        groups.filter(groupID => groupID.split('-')[0] === sectionID).forEach(groupID => {
+          const groupCard = $('<section/>', {
+            class: 'assign-roster-group', 'data-group': groupID
+          });
+          //fill the TA
+          const taSlot = $('<div/>', {class: 'assign-roster-ta-slot', 'data-group': groupID})
+            .append($('<span/>', {class: 'assign-roster-ta-label', text: 'TA: '}));
+          facilitators.filter(ta => assignment.tas[ta.netID].includes(groupID))
+            .forEach(ta => taSlot.append(taCard(ta, groupID)));
+          //fill the students
+          const studentList = $('<div/>', {class: 'assign-roster-students', 'data-group': groupID});
+          students.filter(student => assignment.students[student.NetID] === groupID)
+            .forEach(student => studentList.append(studentCard(student)));
+          groupCard.append($('<h3/>', {text: `Group ${groupID}`}), taSlot, studentList);
+          sectionGroups.append(groupCard);
+        });
+        sectionColumns.append($('<section/>', {class: 'assign-roster-section'})
+          .append($('<h2/>', {text: `Section ${sectionID}`}), sectionGroups));
+      });
+      bindDropTargets();
+    };
+    //drag and drop
+    const bindDropTargets = () => {
+      body.off('.assignRoster');
+      //drag start, by person data
+      body.on('dragstart.assignRoster', '[draggable=true]', evt => {
+        const card = $(evt.currentTarget);
+        //store the netID, type, and original group of the person
+        evt.originalEvent.dataTransfer.setData('text/plain', JSON.stringify({
+          netID: card.data('netid'), type: card.data('person-type'), sourceGroup: card.data('source-group') || null
+        }));
+      });
+      //drag over other groups
+      body.on('dragover.assignRoster', '.assign-roster-group, .assign-roster-ta-slot, .assign-roster-options', evt => {
+        evt.preventDefault();
+      });
+      //drop into a group
+      body.on('drop.assignRoster', evt => {
+          evt.preventDefault();
+          const item = JSON.parse(evt.originalEvent.dataTransfer.getData('text/plain'));
+          const target = $(evt.target);
+          const groupTarget = target.closest('.assign-roster-group');
+          const optionTarget = target.closest('.assign-roster-options');
+          //reassign group if they are a student
+          if(item.type === 'student' && groupTarget.length) {
+            const sourceGroup = assignment.students[item.netID];
+            const targetGroup = groupTarget.data('group');
+            //only allow reassignment in the same section
+            if(sourceGroup.split('-')[0] === targetGroup.split('-')[0]) assignment.students[item.netID] = targetGroup;
+          }
+          //reassign the ta of a group
+          if(item.type === 'ta' && (groupTarget.length || optionTarget.length)) {
+            const groupID = optionTarget.length ? null : groupTarget.data('group');
+            //remove previous ta if one was assigned
+            if(groupID === null) {
+              if(item.sourceGroup) assignment.tas[item.netID] = assignment.tas[item.netID].filter(group => group !== item.sourceGroup);
+            } else if (!assignment.tas[item.netID].includes(groupID)) {
+              Object.keys(assignment.tas).forEach(netID => {
+                assignment.tas[netID] = assignment.tas[netID].filter(group => group !== groupID);
+              });
+              assignment.tas[item.netID].push(groupID);
+            }
+          }
+          refresh();
+        });
+    };
+    body.append(taList, sectionColumns);
+    refresh();
+    content.append(header, body, footer);
+    modal.append(content).click(evt => { if (evt.target === modal[0]) modal.remove(); });
+    $('#content').append(modal);
   }
 
   /* Handles loading page visibility */

@@ -74,8 +74,9 @@ class TAHelper {
           this.loadRoster(file);
         });
 
-        // install an event listener to be triggered when a roster assign request is made
-        
+        $('#content').on('request:admin-save-roster', (evt, assignments) => {
+          this.saveRosterAssignments(assignments);
+        });
       });
     });
   }
@@ -95,11 +96,27 @@ class TAHelper {
     });
   }
 
+  saveRosterAssignments(assignments) {
+    this.ui.showLoader();
+    $.ajax({
+      url: 'roster.php',
+      method: 'POST',
+      data: JSON.stringify({action: 'assign', ...assignments}),
+      contentType: 'application/json'
+    }).done(() => {
+      this.ui.updateState();
+      this.ui.hideLoader();
+    }).fail(xhr => {
+      this.ui.hideLoader();
+      alert(xhr.responseText || 'The roster assignments could not be saved.');
+    });
+  }
+
   /* Loads attendance indicators for a group */
   loadGroupAttendance (evaluatorID, groupID, students) {
     students.forEach(student => {
-      var filename = `${groupID}_${student.NetID}`;
-      $.getJSON(`evaluationInfo.php?type=student&date=${this.getCurrentDate()}&evaluator=${evaluatorID}&filename=${filename}`)
+      var filename = `${student.NetID}`;
+      $.getJSON(`evaluationInfo.php?type=student&date=${this.getCurrentDate()}&evaluator=${evaluatorID}&group=${groupID}&filename=${filename}`)
         .done(form => this.ui.updateAttendanceStatus(student.NetID, form[0] && form[0].Value));
     });
   }
@@ -110,8 +127,8 @@ class TAHelper {
     var attendance = {'Present': 0, 'Absent': 0, '+10min_late': 0, 'Unknown': total, 'Total': total};
 
     var requests = students.map(student => {
-      var filename = `${groupID}_${student.NetID}`;
-      return $.getJSON(`evaluationInfo.php?type=student&date=${this.getCurrentDate()}&evaluator=${evaluatorID}&filename=${filename}`)
+      var filename = `${student.NetID}`;
+      return $.getJSON(`evaluationInfo.php?type=student&date=${this.getCurrentDate()}&evaluator=${evaluatorID}&group=${groupID}&filename=${filename}`)
         .done(form => {
           if(form[0] && form[0].Value) {
             attendance[form[0].Value]++;
@@ -128,8 +145,8 @@ class TAHelper {
   loadForm (type, evaluatorID=null, groupID=null, studentID=null) {
     var studentIDs = (type == "student" && Array.isArray(studentID)) ? studentID : null; //Check for multiple students
     if (studentIDs && studentIDs.length > 1) { //Load default template
-      var templateFilename = `${groupID}___default__`;
-      var templateUrl = `evaluationInfo.php?type=student&date=${this.getCurrentDate()}&evaluator=${evaluatorID}&filename=${templateFilename}`;
+      var templateFilename = `___default__`;
+      var templateUrl = `evaluationInfo.php?type=student&date=${this.getCurrentDate()}&evaluator=${evaluatorID}&group=${groupID}&filename=${templateFilename}`;
       this.ui.showLoader();
       $.getJSON(templateUrl).done(result => {
         this.ui.hideLoader();
@@ -141,8 +158,8 @@ class TAHelper {
       studentID = studentIDs[0];
     }
     var datetime = this.getCurrentDate();
-    var filename = (type == "student") ? `${groupID}_${studentID}` : `${groupID}`;
-    var url = `evaluationInfo.php?type=${type}&date=${datetime}&evaluator=${evaluatorID}&filename=${filename}`;
+    var filename = (type == "student") ? `${studentID}` : `${groupID}`;
+    var url = `evaluationInfo.php?type=${type}&date=${datetime}&evaluator=${evaluatorID}&group=${groupID}&filename=${filename}`;
     // console.log(url)
     
     this.ui.showLoader();
@@ -169,8 +186,8 @@ class TAHelper {
     var datetime = this.getCurrentDate();
     var studentIDs = (type == "student" && Array.isArray(studentID)) ? studentID : [studentID]; //Format to array
     var requests = studentIDs.map(currentStudentID => {
-      var filename = (type == "student") ? `${groupID}_${currentStudentID}` : `${groupID}`;
-      var url = `evaluationInfo.php?type=${type}&date=${datetime}&evaluator=${evaluatorID}&filename=${filename}`;
+      var filename = (type == "student") ? `${currentStudentID}` : `${groupID}`;
+      var url = `evaluationInfo.php?type=${type}&date=${datetime}&evaluator=${evaluatorID}&group=${groupID}&filename=${filename}`;
       var studentData = {
         ...data,
         "Details": {
