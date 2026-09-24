@@ -950,14 +950,22 @@ console.log(whichBack)
       var saveDiv = $('<div/>', {
         id: `form-save-div`
       });
-      if (option.id === 'load') {
-          var rosterInput = $('<input/>', {type: 'file', id: 'roster-file', accept: '.csv,text/csv', style: 'display: none'});
-          rosterInput.change(evt => {
-            var file = evt.currentTarget.files[0];
-            if (file) $('#content').trigger('request:admin-load-roster', [file]);
-            evt.currentTarget.value = '';
-          });
-          saveDiv.append(rosterInput, $('<label/>', {for: 'roster-file', text: 'Select a CSV file to upload', style: 'display: none'}));
+      if(option.id === 'load') {
+        var rosterInput = $('<input/>', {type: 'file', id: 'roster-file', accept: '.csv,text/csv', style: 'display: none'});
+        rosterInput.change(evt => {
+          var file = evt.currentTarget.files[0];
+          if (file) $('#content').trigger('request:admin-load-roster', [file]);
+          evt.currentTarget.value = '';
+        });
+        saveDiv.append(rosterInput, $('<label/>', {for: 'roster-file', text: 'Select a CSV file to upload', style: 'display: none'}));
+      }else if(option.id === 'images') {
+        var imageInput = $('<input/>', {type: 'file', id: 'image-zip', accept: '.zip', style: 'display: none'});
+        imageInput.change(evt => {
+          var file = evt.currentTarget.files[0];
+          if (file) $('#content').trigger('request:admin-upload-images', [file]);
+          evt.currentTarget.value = '';
+        });
+        saveDiv.append(imageInput, $('<label/>', {for: 'image-zip', text: 'Select a ZIP file to upload', style: 'display: none'}));
       }
       saveDiv.append($('<button/>', {
         id: `admin-${option.id}`,
@@ -981,6 +989,7 @@ console.log(whichBack)
   }
 
   handleAdminSaveRequest(option) {
+    this.hideSavedLabels();
     switch (option) {
       case "load":
         $('#roster-file').trigger('click');
@@ -989,7 +998,7 @@ console.log(whichBack)
         this.showRosterAssignment();
         break;
       case "images":
-        $('#content').trigger('request:admin-upload-images', [this.userInfo.NetID]);
+        $('#image-zip').trigger('click');
         break;
       default:
         console.log("Unknown admin option: ", option)
@@ -1426,6 +1435,10 @@ console.log(whichBack)
   /* Notifies the user that form has been saved to database */
   showSavedLabel(option) {
     $(`#form-saved-${option}`).show();
+  }
+
+  hideSavedLabels() {
+    $(`[id^="form-saved-"]`).hide();
   }
 
   /* Turns back button visible or invisible */

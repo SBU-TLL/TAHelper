@@ -77,7 +77,26 @@ class TAHelper {
         $('#content').on('request:admin-save-roster', (evt, assignments) => {
           this.saveRosterAssignments(assignments);
         });
+
+        $('#content').on('request:admin-upload-images', (evt, file) => {
+          this.uploadImages(file);
+        });
       });
+    });
+  }
+
+  uploadImages(file) {
+    this.ui.showLoader();
+
+    var formData = new FormData();
+    formData.append('imageZip', file);
+    $.ajax({url: 'dashboardUpload.php', method: 'POST', data: formData, processData: false, contentType: false})
+    .done(() => {
+      this.ui.hideLoader();
+      this.ui.showSavedLabel('images');
+    }).fail(xhr => {
+      this.ui.hideLoader();
+      alert(xhr.responseText || 'The roster could not be loaded.');
     });
   }
 
@@ -106,6 +125,7 @@ class TAHelper {
     }).done(() => {
       this.ui.updateState();
       this.ui.hideLoader();
+      this.ui.showSavedLabel('assign');
     }).fail(xhr => {
       this.ui.hideLoader();
       alert(xhr.responseText || 'The roster assignments could not be saved.');
