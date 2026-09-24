@@ -115,7 +115,7 @@ class TAHelper {
   /* Loads attendance indicators for a group */
   loadGroupAttendance (evaluatorID, groupID, students) {
     students.forEach(student => {
-      var filename = `${student.NetID}`;
+      var filename = `${groupID}_${student.NetID}`;
       $.getJSON(`evaluationInfo.php?type=student&date=${this.getCurrentDate()}&evaluator=${evaluatorID}&group=${groupID}&filename=${filename}`)
         .done(form => this.ui.updateAttendanceStatus(student.NetID, form[0] && form[0].Value));
     });
@@ -127,7 +127,7 @@ class TAHelper {
     var attendance = {'Present': 0, 'Absent': 0, '+10min_late': 0, 'Unknown': total, 'Total': total};
 
     var requests = students.map(student => {
-      var filename = `${student.NetID}`;
+      var filename = `${groupID}_${student.NetID}`;
       return $.getJSON(`evaluationInfo.php?type=student&date=${this.getCurrentDate()}&evaluator=${evaluatorID}&group=${groupID}&filename=${filename}`)
         .done(form => {
           if(form[0] && form[0].Value) {
@@ -145,7 +145,7 @@ class TAHelper {
   loadForm (type, evaluatorID=null, groupID=null, studentID=null) {
     var studentIDs = (type == "student" && Array.isArray(studentID)) ? studentID : null; //Check for multiple students
     if (studentIDs && studentIDs.length > 1) { //Load default template
-      var templateFilename = `___default__`;
+      var templateFilename = `${groupID}___default__`;
       var templateUrl = `evaluationInfo.php?type=student&date=${this.getCurrentDate()}&evaluator=${evaluatorID}&group=${groupID}&filename=${templateFilename}`;
       this.ui.showLoader();
       $.getJSON(templateUrl).done(result => {
@@ -158,7 +158,7 @@ class TAHelper {
       studentID = studentIDs[0];
     }
     var datetime = this.getCurrentDate();
-    var filename = (type == "student") ? `${studentID}` : `${groupID}`;
+    var filename = (type == "student") ? `${groupID}_${studentID}` : `${groupID}`;
     var url = `evaluationInfo.php?type=${type}&date=${datetime}&evaluator=${evaluatorID}&group=${groupID}&filename=${filename}`;
     // console.log(url)
     
@@ -186,7 +186,7 @@ class TAHelper {
     var datetime = this.getCurrentDate();
     var studentIDs = (type == "student" && Array.isArray(studentID)) ? studentID : [studentID]; //Format to array
     var requests = studentIDs.map(currentStudentID => {
-      var filename = (type == "student") ? `${currentStudentID}` : `${groupID}`;
+      var filename = (type == "student") ? `${groupID}_${currentStudentID}` : `${groupID}`;
       var url = `evaluationInfo.php?type=${type}&date=${datetime}&evaluator=${evaluatorID}&group=${groupID}&filename=${filename}`;
       var studentData = {
         ...data,
@@ -220,7 +220,6 @@ class TAHelper {
   downloadResponses (type, data=null) {
     var url = `responseInfo.php?request=download&type=${type}`;
     // console.log(type, data, url)
-
     $.post(url, {data: data}).done(result => {
       var hiddenElement = document.createElement('a');
       hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(result);

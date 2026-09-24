@@ -551,24 +551,6 @@ return TA.Name
         }
 
         return modalElem.append(selectAll);
-      case "evaluator":
-        var evaluators = data.map(ta => {
-          let evaluatorInput = $('<input/>', {
-            id: `${sectionID}-option-${ta.NetID}`,
-            class: `sub-option`,
-            type: `checkbox`,
-            name: `${sectionID}`
-          }).change(evt => this.updateInputGroup(evt.currentTarget));
-          let evaluatorLabel = $('<label/>', {
-            for: `${sectionID}-option-${ta.NetID}`,
-            html: `${ta.Name} [${ta.NetID}]<br>`
-          });
-          return $('<div/>', {
-            id: `${sectionID}-${ta.NetID}`,
-          }).append(evaluatorInput, evaluatorLabel);
-        });
-
-        return modalElem.append(header, selectAll, evaluators);
       case "session-group":
         let sessionIDs = Array.from(this.userInfo.Group, x => x.split('-')[0]);
         let uniqueSessionIDs = Array.from(new Set(sessionIDs));
@@ -915,7 +897,7 @@ console.log(whichBack)
     var adminDivs = $('<div/>', {
       id: `admin-info`,
       class: `admin flexContainer admin-container`
-    }).append($('<div/>', {
+    }).append($('<h1/>', {
       class: `flexText header-font header-width`,
       
       html: `Professor Dashboard`
@@ -975,7 +957,7 @@ console.log(whichBack)
             if (file) $('#content').trigger('request:admin-load-roster', [file]);
             evt.currentTarget.value = '';
           });
-          saveDiv.append(rosterInput);
+          saveDiv.append(rosterInput, $('<label/>', {for: 'roster-file', text: 'Select a CSV file to upload', style: 'display: none'}));
       }
       saveDiv.append($('<button/>', {
         id: `admin-${option.id}`,

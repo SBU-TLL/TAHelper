@@ -28,6 +28,10 @@ body {
   min-height: 100vh;
 }
 
+h1 {
+  all: unset;
+}
+
 div.admin-container {
   background-color: var(--sbu-panel);
   border: 1px solid var(--sbu-border);

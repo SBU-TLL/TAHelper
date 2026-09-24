@@ -46,14 +46,7 @@ switch ($type) {
 		$data = $_POST["data"];
 		$evaluators = $data["Evaluators"];
 		$groups = $data["Groups"];
-		// guaranteed to have at least one element in $evaluators or $groups at this point
-		if (empty($evaluators)) {
-			$fn_pattern = "$TAHELPER_DATA/studentResponses/*_{" . implode(',', $groups) . "}_*";
-		} else if (empty($groups)) {
-			$fn_pattern = "$TAHELPER_DATA/studentResponses/{" . implode(',', $evaluators). "}_*";
-		} else {
-			$fn_pattern = "$TAHELPER_DATA/studentResponses/{" . implode(',', $evaluators). "}_{" . implode(',', $groups) . "}_*";
-		}
+		$fn_pattern = "$TAHELPER_DATA/studentResponses/{" . implode(',', $groups) . "}_*";
 		break;
 	default:
 		print("Something went wrong in responseInfo.php");
