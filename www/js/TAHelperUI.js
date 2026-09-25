@@ -60,7 +60,7 @@ class TAHelperUI {
   initMenu() {
     this.addBackBtn();
     this.addHomeBtn();
-    if(this.isAdmin) this.addAdminBtn();
+    if(this.userRole === ROLES.ADMIN.PROFESSOR) this.addAdminBtn();
     this.addDropdownMenu();
   }
 
@@ -917,7 +917,7 @@ console.log(whichBack)
       {
         "id": "load",
         "label": "Load Roster",
-        "description": "Load the latest roster into TAHelper.",
+        "description": "Load a CSV file of Student Groups into TAHelper.",
         "button": "Upload"
       },
       {
@@ -929,7 +929,7 @@ console.log(whichBack)
       {
         "id": "images",
         "label": "Upload Images",
-        "description": "Upload student images to TAHelper.",
+        "description": "Upload a zip file of student images into TAHelper.",
         "button": "Upload"
       }
     ]
@@ -1041,7 +1041,8 @@ console.log(whichBack)
       }));
     //available tas
     const taList = $('<div/>', {class: 'assign-roster-options'})
-      .append($('<div/>', {class: 'assign-roster-option-title', text: 'Undergraduate TAs'}));
+      .append($('<span/>', {class: 'assign-roster-ta-label', text: 'Undergraduate TAs'}));
+    const taListContainer = $('<div/>', {class: 'flexContainer', style: 'gap: 1rem'});
     const sectionColumns = $('<div/>', {class: 'assign-roster-sections'});
     //draggable students & tas
     const studentCard = student => $('<div/>', {
@@ -1052,7 +1053,8 @@ console.log(whichBack)
       class: 'assign-roster-person assign-roster-ta', text: ta.name,
       'data-netid': ta.netID, 'data-person-type': 'ta', 'data-source-group': sourceGroup || ''
     }).prop('draggable', true).append($('<small/>', {text: ta.netID}));
-    facilitators.forEach(ta => taList.append(taCard(ta)));
+    facilitators.forEach(ta => taListContainer.append(taCard(ta)));
+    taList.append(taListContainer);
 
     const refresh = () => {
       sectionColumns.empty();

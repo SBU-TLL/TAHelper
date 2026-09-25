@@ -150,12 +150,6 @@
   background: #fafafa;
 }
 
-.assign-roster-option-title {
-  margin-bottom: 0.45rem;
-  color: var(--sbu-dark-red);
-  font-weight: 700;
-}
-
 .assign-roster-groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

@@ -54,6 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($currentSection !== $targetSection) {
                 tahelper_deny(400, "Students may only be assigned within their section.\n");
             }
+            $data_file = $TAHELPER_DATA . '/studentResponses/' . $studentsByNetID[$netID][1]['Group'] . '_' . $netID . '.json';
+            if (file_exists($data_file)) {
+                $new_name = $TAHELPER_DATA . '/studentResponses/' . $group . '_' . $netID . '.json';
+                if (!rename($data_file, $new_name)) {
+                    tahelper_deny(500, "Could not move student response file for $netID.\n");
+                }
+            }
             $studentsByNetID[$netID][1]['Group'] = $group;
         }
 
@@ -103,11 +110,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($handle === false) {
         tahelper_deny(400, "The uploaded roster could not be read.\n");
     }
-    $expected = ['Last Name', 'First Name', 'NetID', 'Student ID', 'Section', 'Group'];
+    $expected = ['Last Name', 'First Name', 'NetID', 'Student ID', 'Group', 'Section'];
     $header = fgetcsv($handle);
     if ($header === false || array_map('trim', $header) !== $expected) {
         fclose($handle);
-        tahelper_deny(400, "CSV headers must be: Last Name,First Name,NetID,Student ID,Section,Group\n");
+        tahelper_deny(400, "CSV headers must be: Last Name,First Name,NetID,Student ID,Group,Section\n");
     }
 
     $dataPath = $TAHELPER_DATA . '/json/data.json';
@@ -130,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             fclose($handle);
             tahelper_deny(400, "CSV row $rowNumber must contain six columns.\n");
         }
-        [$lastName, $firstName, $netID, $studentID, $section, $group] = array_map('trim', $row);
+        [$lastName, $firstName, $netID, $studentID, $group, $section] = array_map('trim', $row);
         if ($lastName === '' || $firstName === '' || $netID === '' || $studentID === '' || !preg_match('/^\d+$/', $section) || !preg_match('/^\d+$/', $group)) {
             fclose($handle);
             tahelper_deny(400, "CSV row $rowNumber has a missing or invalid value.\n");
