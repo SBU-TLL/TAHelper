@@ -1161,9 +1161,8 @@ console.log(whichBack)
 
           // prioritize select all options that are checked
           var checkedAll = $(`#section-all-option-all:checked`);
+          var clearAfter = modalType == "download" && ($('#section-all-option-clear:checked').length > 0);
           if (checkedAll.length > 0) {
-            var clearAfter = modalType == "download" && ($('#section-all-option-clear:checked').length > 0);
-            console.log('clearAfter '+clearAfter);
             if (this.isAdmin) {
               $('#content').trigger(`request:${modalType}-eval`, ["all", null]);
               if(clearAfter) {
@@ -1181,23 +1180,11 @@ console.log(whichBack)
           }
 
           // find all modal options that are checked
-          var checkedEvaluators = $(`input[type=checkbox][name=section-evaluator]:checked`);
           var checkedGroups = $(`input[type=checkbox][name*=section-session-group-]:not([id*=session]):checked`);
-          // console.log(checkedEvaluators, checkedGroups)
-          if (checkedEvaluators.length == 0 && checkedGroups.length == 0) {
+          // console.log(checkedGroups)
+          if (checkedGroups.length == 0) {
             $('#download-modal .modal-message').text("Select a group before continuing.")
             return;
-          }
-
-          if (checkedEvaluators.length > 0) {
-            let checkedAll = checkedEvaluators.filter((_, checked) => $(checked).attr("id").endsWith("-all"));
-            if (checkedAll.length > 0) {
-              var allEvaluators = Object.values(this.userInfo.Evaluators).map(evaluator => evaluator.NetID);
-              data["Evaluators"] = allEvaluators;
-            } else {
-              var evaluators = checkedEvaluators.map((_, evaluator) => $(evaluator).attr("id").split('-')[3]);
-              data["Evaluators"] = Array.from(evaluators);
-            }
           }
 
           if (checkedGroups.length > 0) {
@@ -1208,6 +1195,10 @@ console.log(whichBack)
           // notify TAHelper that a download or clear request has been made
           // console.log(data)
           $('#content').trigger(`request:${modalType}-eval`, ["mix", data]);
+          if(clearAfter) {
+            $('#content').trigger(`request:clear-eval`, ["mix", data]);
+            $('#download-modal .modal-message').text("Successfully cleared responses.")
+          }
           break;
         case "confirm-save":
           this.handleSaveRequest();
