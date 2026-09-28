@@ -54,6 +54,10 @@ div.dropdown:hover .dropdown-content {
   overflow: hidden;
 }
 
+.dropdown-show {
+  display: block;
+}
+
 .dropdown-content button {
   display: block;
   width: 100%;

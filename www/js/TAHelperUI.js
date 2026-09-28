@@ -433,7 +433,8 @@ return TA.Name
       html: `${headerLabel[type]}`
     }).append($('<span/>', {
       class: 'modal-close-button',
-      html: '&times;' // unicode char for 'x' symbol
+      html: '&times;', // unicode char for 'x' symbol
+      'aria-label': `Close ${headerLabel[type]}`
     }).click(evt => this.handleModalCloseRequest()));
 
     // Add modal footer buttons
@@ -505,7 +506,7 @@ return TA.Name
   }
 
   /* Constructs a selection modal */
-  makeSelectionModal (type, inputGroup, data, header = "responses") {
+  makeSelectionModal (type, inputGroup, data) {
     // console.log(type, data)
     var sectionID = `section-${inputGroup}`;
     var capitalizeType = type.charAt(0).toUpperCase() + type.slice(1);
@@ -517,7 +518,7 @@ return TA.Name
 
     var header = $('<label/>', {
       class: `modal-element-header`,
-      html: `${capitalizeType} ${header} from selected ${inputGroup}(s)`
+      html: `${capitalizeType} responses from selected ${inputGroup}(s)`
     });
 
     var selectAllInput = $('<input/>', {
@@ -923,7 +924,7 @@ console.log(whichBack)
       {
         "id": "assign",
         "label": "Assign Roster",
-        "description": "Drag students and TAs to their respective groups.",
+        "description": "Move students and TAs to their respective groups.",
         "button": "Assign"
       },
       {
@@ -1199,14 +1200,7 @@ console.log(whichBack)
     modal.append(content).click(evt => {
       if (evt.target === modal[0]) modal.remove();
     });
-    modal.on('keydown', evt => {
-      if (evt.key === 'Escape') {
-        body.find('.assign-roster-actions').remove();
-        modal.remove();
-      }
-    });
     $('#content').append(modal);
-    header.find('.modal-close-button').trigger('focus');
   }
 
   /* Handles loading page visibility */
@@ -1434,6 +1428,8 @@ console.log(whichBack)
       id: 'dropdownBtn',
       class: `menu-button`,
       html: 'Menu'
+    }).click(evt => {
+      $('#dropdownMenu').toggleClass("dropdown-show");
     });
     var drpdwnMenu = $('<div/>', {
       id: 'dropdownMenu',
