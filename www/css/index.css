@@ -77,8 +77,8 @@ div.admin-form {
   margin: 1rem auto;
 }
 
-div.card-item,
-div.subcard-item {
+.card-item,
+.subcard-item {
   background-color: var(--sbu-panel);
   border: 1px solid var(--sbu-border);
   border-radius: 18px;
@@ -86,34 +86,34 @@ div.subcard-item {
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
-div.card-item:not(div.selected-group) {
+.card-item:not(.selected-group) {
   margin: 1% 2%;
   cursor: pointer;
   height: 100%;
   padding: 24px 16px;
 }
 
-div.card-item:hover:not(div.selected-group) {
+.card-item:hover:not(.selected-group) {
   transform: translateY(-1px) scale(1.01);
   box-shadow: var(--sbu-shadow);
   border-color: rgba(107, 0, 13, 0.25);
   border: 1px solid var(--sbu-red);
 }
 
-div.subcard-item:hover:not(div.selected-student) {
+.subcard-item:hover:not(.selected-student) {
   box-shadow: var(--sbu-shadow);
   border-color: rgba(107, 0, 13, 0.25);
   border: 1px solid var(--sbu-red);
 }
 
-div.subcard-item {
+.subcard-item {
   width: 20%;
   padding: 24px 16px;
   margin: 12px 20px;
   cursor: pointer;
 }
 
-div.selected-group {
+.selected-group {
   width: 100% !important;
   cursor: default !important;
   background: #ffffff;
@@ -123,7 +123,7 @@ div.selected-group {
   display: none;
 }
 
-div.selected-student {
+.selected-student {
   width: 100% !important;
   margin: 0 !important;
   padding-top: 14px !important;
@@ -142,7 +142,7 @@ div.student-buttons {
   gap: 1rem;
 }
 
-div.selected:not(.flexContainer) {
+.selected:not(.flexContainer) {
   background: var(--sbu-red-soft);
 }
 
@@ -241,6 +241,7 @@ div.attendance-bar {
 
 form {
   width: 100%;
+  text-align: left;
 }
 
 .selected-group > form {

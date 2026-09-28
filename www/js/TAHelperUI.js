@@ -90,7 +90,7 @@ class TAHelperUI {
     console.log(this.sectionInfo["Section"]);
     // convert to set to remove duplicates, then back to array
     var sessions = new Set(this.userInfo.Group.map(id => id.split('-')[0]));
-    var sessionDivs = Array.from(sessions).map(sessionID => $('<div/>', {
+    var sessionDivs = Array.from(sessions).map(sessionID => $('<button/>', {
       id: `${sessionID}`,
       class: `session card-item flexChildren`
     }).append($('<div/>', {
@@ -122,7 +122,7 @@ class TAHelperUI {
   // wanted back — it belongs in the course's own data, not in the UI.
   groups = groups.sort(function(a, b){return a - b})
 
-    var groupDivs = groups.map(groupID => $('<div/>', {
+    var groupDivs = groups.map(groupID => $('<button/>', {
         id: `${groupID}`,
         class: `session-group card-item flexChildren`
       }).append($('<div/>', {
@@ -213,7 +213,7 @@ return TA.Name
     //if(this.userRole.includes("Facil")){
     //hidden="hide"
     //}
-    var studDivs = groupInfo.map(student => $('<div/>', {
+    var studDivs = groupInfo.map(student => $('<button/>', {
       id: `${student.NetID}`,
       class: `student subcard-item flexChildren ${this.state.selectedStudents.includes(student.NetID) ? "selected" : ""}`,
     }).click(evt => {
@@ -1046,6 +1046,7 @@ console.log(whichBack)
       .append($('<span/>', {class: 'assign-roster-ta-label', text: 'Undergraduate TAs'}));
     const taListContainer = $('<div/>', {class: 'flexContainer', style: 'gap: 1rem'});
     const sectionColumns = $('<div/>', {class: 'assign-roster-sections'});
+
     const showPersonActions = card => {
       const existingActions = card.next('.assign-roster-actions');
       if (existingActions.length) {
@@ -1097,6 +1098,7 @@ console.log(whichBack)
       card.after(actionList);
       actionList.find('button').first().trigger('focus');
     };
+
     const personCard = (name, netID, personType, sourceGroup = null) => {
       const card = $('<button/>', {
         type: 'button', class: `assign-roster-person ${personType === 'ta' ? 'assign-roster-ta' : ''}`,
