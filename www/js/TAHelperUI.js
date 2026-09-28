@@ -144,7 +144,9 @@ class TAHelperUI {
     this.addToParentById("content" /* parent container */, groupDivs);
     groups.map(groupID => {
       var groupInfo = this.studInfo.filter(grp => grp.length > 0 && grp[0].Group == groupID)[0];
-      $('#content').trigger('request:group-attendance-percent', [this.userInfo.NetID, groupID, groupInfo]);
+      $(document).ready(() => {
+        $('#content').trigger('request:group-attendance-percent', [this.userInfo.NetID, groupID, groupInfo]);
+      });
     })
   }
   getTAfromGroupID(groupID){
@@ -223,7 +225,7 @@ return TA.Name
         return;
       }
       this.handleStudentSelection(student.NetID);
-    }).append($('<img/>', {
+    }).attr("aria-label","Select " + student.Name).append($('<img/>', {
       class: `profile`,
       id: `${student.NetID}_img`,
       // src: `images/${i.Name.replaceAll(' ','_').replaceAll('\'','-') + "," + i.SID}.jpg}` // students might have names with special characters
@@ -879,12 +881,10 @@ console.log(whichBack)
     var name = $(document.getElementById(studentID)).find('.subheader-width').first().html();
     if(this.state.selectedStudents.includes(studentID)) {
       this.state.selectedStudents.splice(this.state.selectedStudents.indexOf(studentID), 1);
-      $('.student#' + studentID).removeClass('selected');
-      $('.student#' + studentID).find('#select_' + studentID).text('Select').attr("aria-label","Select " + name);
+      $('.student#' + studentID).removeClass('selected').attr("aria-label","Select " + name);
     }else{
       this.state.selectedStudents.push(studentID);
-      $('.student#' + studentID).addClass('selected');
-      $('.student#' + studentID).find('#select_' + studentID).text('Selected').attr("aria-label","Deselect " + name);
+      $('.student#' + studentID).addClass('selected').attr("aria-label","Deselect " + name);
     }
     $('#edit-students').prop("disabled", this.state.selectedStudents.length == 0);
   }
@@ -1031,7 +1031,9 @@ console.log(whichBack)
     const modal = $('<div/>', {id: 'assign-roster-modal', class: 'modal'});
     const content = $('<div/>', {class: 'modal-content assign-roster-content'});
     const header = $('<div/>', {class: 'modal-header', text: 'Assign Roster'})
-      .append($('<span/>', {class: 'modal-close-button', html: '&times;'}).click(() => modal.remove()));
+      .append($('<button/>', {
+        type: 'button', class: 'modal-close-button', 'aria-label': 'Close roster assignment', html: '&times;'
+      }).click(() => modal.remove()));
     const body = $('<div/>', {class: 'modal-body assign-roster-body'});
     const footer = $('<div/>', {class: 'modal-footer'})
       .append($('<button/>', {class: 'modal-request-button', text: 'Cancel'}).click(() => modal.remove()))
@@ -1044,15 +1046,72 @@ console.log(whichBack)
       .append($('<span/>', {class: 'assign-roster-ta-label', text: 'Undergraduate TAs'}));
     const taListContainer = $('<div/>', {class: 'flexContainer', style: 'gap: 1rem'});
     const sectionColumns = $('<div/>', {class: 'assign-roster-sections'});
-    //draggable students & tas
-    const studentCard = student => $('<div/>', {
-      class: 'assign-roster-person', text: student.Name,
-      'data-netid': student.NetID, 'data-person-type': 'student'
-    }).prop('draggable', true).append($('<small/>', {text: student.NetID}));
-    const taCard = (ta, sourceGroup = null) => $('<div/>', {
-      class: 'assign-roster-person assign-roster-ta', text: ta.name,
-      'data-netid': ta.netID, 'data-person-type': 'ta', 'data-source-group': sourceGroup || ''
-    }).prop('draggable', true).append($('<small/>', {text: ta.netID}));
+    const showPersonActions = card => {
+      const existingActions = card.next('.assign-roster-actions');
+      if (existingActions.length) {
+        existingActions.remove();
+        return;
+      }
+      body.find('.assign-roster-actions').remove();
+      const netID = card.data('netid');
+      const personType = card.data('person-type');
+      const sourceGroup = card.data('source-group') || null;
+      const actionList = $('<div/>', {
+        class: 'assign-roster-actions', role: 'menu', 'aria-label': 'Assignment actions'
+      });
+      const addAction = (label, action) => actionList.append($('<button/>', {
+        type: 'button', role: 'menuitem', class: 'assign-roster-action', text: label
+      }).click(() => {
+        action();
+        actionList.remove();
+        refresh();
+      }));
+
+      if (personType === 'student') {
+        const currentGroup = assignment.students[netID];
+        const section = currentGroup.split('-')[0];
+        //get groups the student can move to
+        groups.filter(groupID => groupID.split('-')[0] === section && groupID !== currentGroup)
+          .forEach(groupID => addAction(`Move to Group ${groupID}`, () => {
+            assignment.students[netID] = groupID;
+          }));
+      } else {
+        const assignedGroups = assignment.tas[netID];
+        //check if ta is in a group
+        if (sourceGroup) addAction(`Remove from Group ${sourceGroup}`, () => {
+          assignment.tas[netID] = assignment.tas[netID].filter(group => group !== sourceGroup);
+        });
+        //get groups the ta can get added to
+        groups.filter(groupID => !assignedGroups.includes(groupID))
+          .forEach(groupID => addAction(`Add to Group ${groupID}`, () => {
+            Object.keys(assignment.tas).forEach(otherNetID => {
+              assignment.tas[otherNetID] = assignment.tas[otherNetID].filter(group => group !== groupID);
+            });
+            assignment.tas[netID].push(groupID);
+          }));
+      }
+
+      if (actionList.children().length === 0) {
+        actionList.append($('<span/>', {class: 'assign-roster-no-actions', text: 'No other groups available'}));
+      }
+      card.after(actionList);
+      actionList.find('button').first().trigger('focus');
+    };
+    const personCard = (name, netID, personType, sourceGroup = null) => {
+      const card = $('<button/>', {
+        type: 'button', class: `assign-roster-person ${personType === 'ta' ? 'assign-roster-ta' : ''}`,
+        'aria-label': `${name}, ${personType === 'ta' ? 'TA' : 'student'}`,
+        'data-netid': netID, 'data-person-type': personType, 'data-source-group': sourceGroup || ''
+      }).prop('draggable', true).append($('<span/>', {text: name}));
+      const person = $('<small/>', {text: netID});
+      card.append(person).click(evt => {
+        evt.preventDefault();
+        showPersonActions(card);
+      });
+      return card;
+    };
+    const studentCard = student => personCard(student.Name, student.NetID, 'student');
+    const taCard = (ta, sourceGroup = null) => personCard(ta.name, ta.netID, 'ta', sourceGroup);
     facilitators.forEach(ta => taListContainer.append(taCard(ta)));
     taList.append(taListContainer);
 
@@ -1128,12 +1187,24 @@ console.log(whichBack)
           }
           refresh();
         });
+      body.on('keydown.assignRoster', evt => {
+        if (evt.key === 'Escape') body.find('.assign-roster-actions').remove();
+      });
     };
     body.append(taList, sectionColumns);
     refresh();
     content.append(header, body, footer);
-    modal.append(content).click(evt => { if (evt.target === modal[0]) modal.remove(); });
+    modal.append(content).click(evt => {
+      if (evt.target === modal[0]) modal.remove();
+    });
+    modal.on('keydown', evt => {
+      if (evt.key === 'Escape') {
+        body.find('.assign-roster-actions').remove();
+        modal.remove();
+      }
+    });
     $('#content').append(modal);
+    header.find('.modal-close-button').trigger('focus');
   }
 
   /* Handles loading page visibility */

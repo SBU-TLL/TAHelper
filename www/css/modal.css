@@ -96,6 +96,12 @@
 /* The Close Button */
 .modal-close-button {
   float: right;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .modal-close-button:hover,
@@ -129,7 +135,7 @@
 
 .modal-request-button:hover,
 .modal-request-button:focus {
-  filter: brightness(1.06);
+  background: var(--sbu-red);
 }
 
 .assign-roster-content {
@@ -206,6 +212,7 @@
   background: white;
   cursor: grab;
   font-weight: 600;
+  text-align: left;
 }
 
 .assign-roster-person:active {
@@ -215,6 +222,41 @@
 .assign-roster-person small {
   color: #65717d;
   font-weight: 400;
+}
+
+.assign-roster-person:focus-visible,
+.assign-roster-action:focus-visible,
+.modal-close-button:focus-visible {
+  outline: 3px solid #1d70b8;
+  outline-offset: 2px;
+}
+
+.assign-roster-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.5rem;
+  padding: 0.45rem;
+  border-left: 3px solid var(--sbu-dark-red);
+  background: #f8f8f8;
+}
+
+.assign-roster-action {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--sbu-border);
+  background: white;
+  color: var(--sbu-ink);
+  cursor: pointer;
+}
+
+.assign-roster-action:hover,
+.assign-roster-action:focus-visible {
+  background: #fff0f0;
+}
+
+.assign-roster-no-actions {
+  color: #65717d;
+  font-style: italic;
 }
 
 /* Add Animation */
