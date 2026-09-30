@@ -216,7 +216,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if(count($students) > 0 ) $current['Student Groups'] = $students;
     if(count($tas) > 0 ) $current['TA Groups'] = $tas;
     $temporaryPath = $dataPath . '.tmp.' . bin2hex(random_bytes(6));
-    $json = json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    $json = json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_IGNORE);
+    
     if ($json === false || file_put_contents($temporaryPath, $json) === false || !rename($temporaryPath, $dataPath)) {
         @unlink($temporaryPath);
         tahelper_deny(500, "The roster could not be saved.\n");
