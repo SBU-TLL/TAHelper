@@ -45,6 +45,7 @@ div.admin-container {
   height: 100%;
   display: flex;
   flex-direction: column;
+  padding: 0px 16px;
 }
 
 div.admin-form {
@@ -75,6 +76,11 @@ div.admin-form {
   min-width: 110px;
   width: fit-content;
   margin: 1rem auto;
+}
+
+.session,
+.session-group {
+  min-width: 175px;
 }
 
 .card-item,
@@ -142,7 +148,7 @@ div.student-buttons {
   gap: 1rem;
 }
 
-.selected:not(.flexContainer) {
+.selected:not(.flexContainer):not(.edit-mode) {
   background: var(--sbu-red-soft);
 }
 

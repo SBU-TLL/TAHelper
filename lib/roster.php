@@ -110,11 +110,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($handle === false) {
         tahelper_deny(400, "The uploaded roster could not be read.\n");
     }
-    $expected = ['Last Name', 'First Name', 'NetID', 'Student ID', 'Group', 'Section'];
+    $expectedStudents = ['Last Name', 'First Name', 'NetID', 'Student ID', 'Group', 'Section'];
+    $expectedTAs = ['Last Name', 'First Name', 'NetID', 'Type', 'Group', 'Section'];
     $header = fgetcsv($handle);
-    if ($header === false || array_map('trim', $header) !== $expected) {
+    if ($header === false || (array_map('trim', $header) !== $expectedStudents && array_map('trim', $header) !== $expectedTAs)) {
         fclose($handle);
         tahelper_deny(400, "CSV headers must be: Last Name,First Name,NetID,Student ID,Group,Section\n");
+    }
+
+    $isStudentRoster = array_map('trim', $header) === $expectedStudents;
+    $numGroups = [];
+    if(!$isStudentRoster) {
+        $dataPath = $TAHELPER_DATA . '/json/data.json';
+        $current = json_decode((string)file_get_contents($dataPath), true);
+
+        foreach ($current['Student Groups'] as $student) {
+            if (isset($student['Group'])) {
+                $section = explode('-', (string)$student['Group'], 2)[0];
+                $group = explode('-', (string)$student['Group'], 2)[1];
+                $numGroups[$section] = max($numGroups[$section] ?? 0, (int)$group);
+            }
+        }
     }
 
     $dataPath = $TAHELPER_DATA . '/json/data.json';
@@ -125,6 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $students = [];
+    $tas = [];
     $seenNetIDs = [];
     $seenStudentIDs = [];
     $rowNumber = 1;
@@ -133,43 +150,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (count(array_filter($row, fn($value) => trim((string)$value) !== '')) === 0) {
             continue;
         }
-        if (count($row) !== count($expected)) {
+        if (count($row) !== count($expectedStudents) && $isStudentRoster) {
             fclose($handle);
             tahelper_deny(400, "CSV row $rowNumber must contain six columns.\n");
         }
-        [$lastName, $firstName, $netID, $studentID, $group, $section] = array_map('trim', $row);
-        if ($lastName === '' || $firstName === '' || $netID === '' || $studentID === '' || !preg_match('/^\d+$/', $section) || !preg_match('/^\d+$/', $group)) {
-            fclose($handle);
-            tahelper_deny(400, "CSV row $rowNumber has a missing or invalid value.\n");
+        if($isStudentRoster) {
+            [$lastName, $firstName, $netID, $studentID, $group, $section] = array_map('trim', $row);
+            if ($lastName === '' || $firstName === '' || $netID === '' || $studentID === '' || !preg_match('/^\d+$/', $section) || !preg_match('/^\d+$/', $group)) {
+                fclose($handle);
+                tahelper_deny(400, "CSV row $rowNumber has a missing or invalid value.\n");
+            }
+            if (isset($seenNetIDs[$netID]) || isset($seenStudentIDs[$studentID])) {
+                fclose($handle);
+                tahelper_deny(400, "CSV row $rowNumber duplicates a student.\n");
+            }
+            $studentKey = hash('sha256', $studentID);
+            $students[$studentKey] = ['GTAGroups' => [], 'Group' => "$section-$group", 'Name' => "$firstName $lastName", 'NetID' => $netID, 'SID' => $studentKey, 'Warning' => 'Ok'];
+            $seenNetIDs[$netID] = true;
+            $seenStudentIDs[$studentID] = true;
+        }else {
+            [$lastName, $firstName, $netID, $type, $group, $section] = array_map('trim', $row);
+            if ($lastName === '' || $firstName === '' || $netID === '' || $type === '') {
+                fclose($handle);
+                tahelper_deny(400, "CSV row $rowNumber has a missing or invalid value.\n");
+            }
+
+            if(!isset($tas[$netID])) {
+                $tas[$netID] = ['Evaluators' => [], 'GTAGroups' => [], 'Group' => [], 'Name' => "$firstName $lastName", 'NetID' => $netID, 'Type' => $type];
+            }
+
+            if($type === 'Group Facilitator') {
+                $tas[$netID]['Group'][] = "$section-$group";
+            }else{
+                foreach ($numGroups as $section => $maxGroup) {
+                    for ($i = 1; $i <= $maxGroup; $i++) {
+                        $tas[$netID]['Group'][] = "$section-$i";
+                    }
+                }
+            }
         }
-        if (isset($seenNetIDs[$netID]) || isset($seenStudentIDs[$studentID])) {
-            fclose($handle);
-            tahelper_deny(400, "CSV row $rowNumber duplicates a student.\n");
-        }
-        $studentKey = hash('sha256', $studentID);
-        $students[$studentKey] = ['GTAGroups' => [], 'Group' => "$section-$group", 'Name' => "$firstName $lastName", 'NetID' => $netID, 'SID' => $studentKey, 'Warning' => 'Ok'];
-        $seenNetIDs[$netID] = true;
-        $seenStudentIDs[$studentID] = true;
     }
     fclose($handle);
-    if (count($students) === 0) {
-        tahelper_deny(400, "The CSV does not contain any students.\n");
+    if (count($students) === 0 && count($tas) === 0) {
+        tahelper_deny(400, "The CSV does not contain any students or TAs.\n");
     }
 
-    $current['Student Groups'] = $students;
+    if(!$isStudentRoster) { //add correct evaluators to the tas
+        foreach ($tas as $currentTA) {
+            foreach($tas as $checkTA) {
+                $add = false;
+                if($checkTA['Type'] === 'Group Facilitator' && $currentTA['Type'] !== 'Group Facilitator') {
+                    $add = true;
+                }else if($checkTA['Type'] === 'GTAs' && $currentTA['Type'] === 'Professor') {
+                    $add = true;
+                }
+                if($add) {
+                    $tas[$currentTA['NetID']]['Evaluators'][] = [
+                        'Name' => $checkTA['Name'], 'NetID' => $checkTA['NetID']
+                    ];
+                }
+            }
+        }
+    }
+
+    if(count($students) > 0 ) $current['Student Groups'] = $students;
+    if(count($tas) > 0 ) $current['TA Groups'] = $tas;
     $temporaryPath = $dataPath . '.tmp.' . bin2hex(random_bytes(6));
     $json = json_encode($current, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     if ($json === false || file_put_contents($temporaryPath, $json) === false || !rename($temporaryPath, $dataPath)) {
         @unlink($temporaryPath);
         tahelper_deny(500, "The roster could not be saved.\n");
     }
-    foreach (glob($TAHELPER_DATA . '/studentResponses/*.json') as $response) {
-        if (!unlink($response)) {
-            tahelper_deny(500, "The roster was saved, but student responses could not be cleared.\n");
+    if($isStudentRoster) {
+        foreach (glob($TAHELPER_DATA . '/studentResponses/*.json') as $response) {
+            if (!unlink($response)) {
+                tahelper_deny(500, "The roster was saved, but student responses could not be cleared.\n");
+            }
         }
     }
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['students' => count($students)]);
+    echo json_encode(['students' => count($students), 'tas' => count($tas)]);
     exit;
 }
 

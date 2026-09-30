@@ -60,7 +60,15 @@ class TAHelperUI {
   initMenu() {
     this.addBackBtn();
     this.addHomeBtn();
-    if(this.userRole === ROLES.ADMIN.PROFESSOR) this.addAdminBtn();
+    if(this.userRole === ROLES.ADMIN.PROFESSOR) {
+      this.addAdminBtn();
+
+      if(sessionStorage.getItem('showAdmin') !== null) {
+        this.handleAdminRequest();
+        this.showSavedLabel(sessionStorage.getItem('showAdmin'));
+        sessionStorage.removeItem('showAdmin');
+      }
+    }
     this.addDropdownMenu();
   }
 
@@ -92,7 +100,8 @@ class TAHelperUI {
     var sessions = new Set(this.userInfo.Group.map(id => id.split('-')[0]));
     var sessionDivs = Array.from(sessions).map(sessionID => $('<button/>', {
       id: `${sessionID}`,
-      class: `session card-item flexChildren`
+      class: `session card-item flexChildren`,
+      'aria-label': `Select Section ${sessionID}`
     }).append($('<div/>', {
       class: `flexText header-font`,
       html: `Section ${sessionID}  ${this.sectionInfo["Section"][sessionID]}`
@@ -124,7 +133,8 @@ class TAHelperUI {
 
     var groupDivs = groups.map(groupID => $('<button/>', {
         id: `${groupID}`,
-        class: `session-group card-item flexChildren`
+        class: `session-group card-item flexChildren`,
+        'aria-label': `Select Group ${groupID}`
       }).append($('<div/>', {
         class: `flexText subheader-font subheader-color1`,
         html: `Section ${groupID.split('-')[0]}`
@@ -918,7 +928,7 @@ console.log(whichBack)
       {
         "id": "load",
         "label": "Load Roster",
-        "description": "Load a CSV file of Student Groups into TAHelper.",
+        "description": "Load a CSV file of Students or TAs into TAHelper.",
         "button": "Upload"
       },
       {
@@ -1430,6 +1440,7 @@ console.log(whichBack)
       html: 'Menu'
     }).click(evt => {
       $('#dropdownMenu').toggleClass("dropdown-show");
+      $('#dropdownBtn').toggleClass("menu-button-open");
     });
     var drpdwnMenu = $('<div/>', {
       id: 'dropdownMenu',

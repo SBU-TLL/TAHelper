@@ -107,8 +107,8 @@ class TAHelper {
     formData.append('roster', file);
     $.ajax({url: 'roster.php', method: 'POST', data: formData, processData: false, contentType: false})
     .done(() => {
-      this.ui.hideLoader();
-      this.ui.showSavedLabel('load');
+      sessionStorage.setItem('showAdmin', 'load');
+      window.location.reload();
     }).fail(xhr => {
       this.ui.hideLoader();
       alert(xhr.responseText || 'The roster could not be loaded.');
@@ -123,9 +123,8 @@ class TAHelper {
       data: JSON.stringify({action: 'assign', ...assignments}),
       contentType: 'application/json'
     }).done(() => {
-      this.ui.updateState();
-      this.ui.hideLoader();
-      this.ui.showSavedLabel('assign');
+      sessionStorage.setItem('showAdmin', 'assign');
+      window.location.reload();
     }).fail(xhr => {
       this.ui.hideLoader();
       alert(xhr.responseText || 'The roster assignments could not be saved.');

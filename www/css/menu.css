@@ -16,8 +16,7 @@ button.menu-button {
 }
 
 button.menu-button:hover,
-button.menu-button:focus,
-button.menu-button:active {
+button.menu-button-open {
   background: var(--sbu-red);
 }
 
