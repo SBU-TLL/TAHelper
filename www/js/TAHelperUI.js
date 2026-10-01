@@ -31,7 +31,9 @@ class TAHelperUI {
       hasUnsavedChanges: false,
       waitingOnSavePrompt: false,
       waitingOnClearPrompt: false,
-      enableGroupEvaluations: false
+      enableGroupEvaluations: false,
+      selectedStudents: [],
+      selectionLocked: false
     };
   }
 
@@ -40,6 +42,7 @@ class TAHelperUI {
   setWaitingOnSavePrompt (val) { this.state.waitingOnSavePrompt = val; }
   setWaitingOnClearPrompt (val) { this.state.waitingOnClearPrompt = val; }
   setEnableGroupEvaluations (val) { this.state.enableGroupEvaluations = val; }
+  clearSelectedStudents () { this.state.selectedStudents = []; }
 
   /* Handles any necessary UI updates according to changes in state */
   updateState() {
@@ -56,6 +59,18 @@ class TAHelperUI {
   /* Add menu options to the top of the page */
   initMenu() {
     this.addBackBtn();
+    this.addHomeBtn();
+    if(this.userRole === ROLES.ADMIN.PROFESSOR) {
+      this.addAdminBtn();
+
+      if(sessionStorage.getItem('showAdmin') !== null) {
+        this.handleAdminRequest();
+        this.showSavedLabel(sessionStorage.getItem('showAdmin'));
+        sessionStorage.removeItem('showAdmin');
+      }
+
+      $('#right-menu').addClass('right-menu-admin');
+    }
     this.addDropdownMenu();
   }
 
@@ -85,12 +100,13 @@ class TAHelperUI {
     console.log(this.sectionInfo["Section"]);
     // convert to set to remove duplicates, then back to array
     var sessions = new Set(this.userInfo.Group.map(id => id.split('-')[0]));
-    var sessionDivs = Array.from(sessions).map(sessionID => $('<div/>', {
+    var sessionDivs = Array.from(sessions).map(sessionID => $('<button/>', {
       id: `${sessionID}`,
-      class: `session card-item flexChildren`
+      class: `session card-item flexChildren`,
+      'aria-label': `Select Section ${sessionID}`
     }).append($('<div/>', {
       class: `flexText header-font`,
-      html: `Section ${sessionID}  ${this.sectionInfo["Section"][sessionID]}`
+      html: `Section ${sessionID}  ${this.sectionInfo["Section"][sessionID] ? ` ${this.sectionInfo["Section"][sessionID]}` : ""}`
     })).click(evt => this.handleClickEvent(evt)));
 
     this.addToParentById("content" /* parent container */, sessionDivs);
@@ -116,23 +132,34 @@ class TAHelperUI {
   // whose code happens to contain it. See git history if that mapping is ever
   // wanted back — it belongs in the course's own data, not in the UI.
   groups = groups.sort(function(a, b){return a - b})
-    var groupDivs = groups.map(groupID => $('<div/>', {
-      id: `${groupID}`,
-      class: `session-group card-item flexChildren`
-    }).append($('<div/>', {
-      class: `flexText subheader-font subheader-color1`,
-      html: `Section ${groupID.split('-')[0]}`
-    }), $('<div/>', {
-      class: `flexText header-font`,
-      html: `Group ${groupID.split('-')[1]}`
-    }), $('<div/>', {
-      class: `flexText ta-font`,
-      html: `TA: ${this.getTAfromGroupID(groupID)}`
-     }),$('<div/>')
 
-     ).click(evt => this.handleClickEvent(evt)));
+    var groupDivs = groups.map(groupID => $('<button/>', {
+        id: `${groupID}`,
+        class: `session-group card-item flexChildren`,
+        'aria-label': `Select Group ${groupID}`
+      }).append($('<div/>', {
+        class: `flexText subheader-font subheader-color1`,
+        html: `Section ${groupID.split('-')[0]}`
+      }), $('<div/>', {
+        class: `flexText header-font`,
+        html: `Group ${groupID.split('-')[1]}`
+      }), $('<div/>', {
+        class: `flexText ta-font`,
+        html: `TA: ${this.getTAfromGroupID(groupID)}`
+      }), $('<div/>', {
+        class: `attendance-bar`
+      }),$('<div/>')
+
+      ).click(evt => this.handleClickEvent(evt))
+    );
 
     this.addToParentById("content" /* parent container */, groupDivs);
+    groups.map(groupID => {
+      var groupInfo = this.studInfo.filter(grp => grp.length > 0 && grp[0].Group == groupID)[0];
+      $(document).ready(() => {
+        $('#content').trigger('request:group-attendance-percent', [this.userInfo.NetID, groupID, groupInfo]);
+      });
+    })
   }
   getTAfromGroupID(groupID){
 console.log(this.TAInfo["nkdean"])
@@ -155,10 +182,10 @@ return TA.Name
       this.showNoStudLabel(groupID);
       return;
     }
-
+    $(document.getElementById(groupID)).find('.attendance-bar').hide();
     // hide contents until student images have all been loaded in
     this.state.imagesToLoad = groupInfo.length;
-    this.showLoader();
+    //this.showLoader();
 
     // include link to group evaluation form
     if (this.state.enableGroupEvaluations) {
@@ -167,14 +194,50 @@ return TA.Name
     } else {
       this.hideGroupEvalLink(groupID);
     }
+    var groupElement = document.getElementById(groupID);
+    var editButton = $('<button/>', {
+      class: 'student group-button',
+      id: `edit-students`,
+      'data-group-id': groupID,
+      text: 'Edit Selected',
+      disabled: (this.state.selectedStudents.length == 0)
+    }).click(evt => {
+      evt.stopPropagation();
+      this.handleClickEvent(evt);
+    });
+    var invertButton = $('<button/>', {
+      class: 'group-button',
+      text: 'Invert Selection'
+    }).click(evt => {
+      evt.stopPropagation();
+      for (var student of groupInfo) {
+        this.handleStudentSelection(student.NetID);
+      }
+    });
+    var groupToolbar = $('<div/>', {
+      class: 'group-toolbar'
+    }).append(invertButton, editButton);
+    $(groupElement).find('.group-toolbar').remove();
+    var groupHeader = $(groupElement).find('.header-width').first();
+    (groupHeader.length ? groupHeader : $(groupElement)).append(groupToolbar);
+
     var hidden="";
     //if(this.userRole.includes("Facil")){
     //hidden="hide"
     //}
-    var studDivs = groupInfo.map(student => $('<div/>', {
+    var studDivs = groupInfo.map(student => $('<button/>', {
       id: `${student.NetID}`,
-      class: `student subcard-item flexChildren`,
-    }).append($('<img/>', {
+      class: `student subcard-item flexChildren ${this.state.selectedStudents.includes(student.NetID) ? "selected" : ""}`,
+    }).click(evt => {
+      evt.stopPropagation();
+      if(evt.detail == 2) {
+        this.clearSelectedStudents();
+        this.handleStudentSelection(student.NetID);
+        this.handleClickEvent(evt);
+        return;
+      }
+      this.handleStudentSelection(student.NetID);
+    }).attr("aria-label","Select " + student.Name).append($('<img/>', {
       class: `profile`,
       id: `${student.NetID}_img`,
       // src: `images/${i.Name.replaceAll(' ','_').replaceAll('\'','-') + "," + i.SID}.jpg}` // students might have names with special characters
@@ -183,19 +246,28 @@ return TA.Name
       src: `photo.php?f=${encodeURIComponent(`${student.Name},${student.SID}.jpg`)}`,
       'data-photo': `${student.Name},${student.SID}.jpg`,
       onload: () => this.handleImageLoaded(),
+      alt: `Profile Image of ${student.Name}`
       // onerror: `this.src='images/no-image-available.jpg'` // alt image if none found
     }).click(evt => {this.handleClickEvent(evt)} )
+    ,$('<label/>', {
+      for: `${student.NetID}_upload`,
+      text: "Upload Student Photo",
+      style: "display:none"
+    })
     ,$('<input>',{type:"file",accept:"image/*",capture:"enviroment",id:`${student.NetID}_upload` ,style:"display:none"}) 
     ,$('<div/>', {
       class: `student-info flexText`
-    }).append($('<label/>', {
+    }).append($('<div/>', {
       class: `subheader-width subheader-font`,
       html: `${student.Name}`
-    }), $('<label/>', {
+    }), $('<div/>', {
       class: `subheader-width subheader-color2`,
       html: `NetID: ${student.NetID}`
-    }), $('<label/>', {
-      class: `subheader-color2 ${hidden}`,
+    }), $('<div/>', {
+      class: 'attendance-status attendance-unknown',
+      text: 'Attendance: N/A'
+    }), $('<div/>', {
+      class: `subheader-color2 ${hidden} ${student.Warning && student.Warning != "Ok" ? "" : "hide"}`,
       html: `Warning: ${student.Warning}`
     })
 
@@ -204,15 +276,53 @@ return TA.Name
 );
 
     this.addToParentById(groupID /* parent container */, studDivs);
-    $(`.student`).click(evt => this.handleClickEvent(evt)); 
+    $('#content').trigger('request:group-attendance', [this.userInfo.NetID, groupID, groupInfo]);
+    //$(`.student`).click(evt => this.handleClickEvent(evt)); 
 }
 
+  /* Updates the attendance indicator on a student tile */
+  updateAttendanceStatus (studentID, value) {
+    var status = value || "N/A";
+    var label = {
+      "Present": "Present",
+      "Absent": "Absent",
+      "+10min_late": "Late"
+    }[status] || "N/A";
+    var statusElem = $(document.getElementById(studentID)).find('.attendance-status');
+    statusElem.text(`Attendance: ${label}`)
+      .removeClass('attendance-present attendance-absent attendance-late attendance-unknown')
+      .addClass({
+        "Present": "attendance-present",
+        "Absent": "attendance-absent",
+        "+10min_late": "attendance-late"
+      }[status] || 'attendance-unknown');
+  }
+
+  updateAttendancePercent(groupID, attendance) {
+    var barElem = $(document.getElementById(groupID)).find('.attendance-bar');
+    var total = attendance['Total'] || 0;
+    if (total === 0) {
+        barElem.html('<div style="width: 100%; background-color: #475569; height: 100%;"></div>');
+        return;
+    }
+    barElem.html('').append(
+        $('<div/>', { style: `width: ${(attendance['Present'] / total) * 100}%; background-color: #208347; height: 100%` }),
+        $('<div/>', { style: `width: ${(attendance['Absent'] / total) * 100}%; background-color: #c42222; height: 100%` }),
+        $('<div/>', { style: `width: ${(attendance['+10min_late'] / total) * 100}%; background-color: #c57317; height: 100%` }),
+        $('<div/>', { style: `width: ${(attendance['Unknown'] / total) * 100}%; background-color: #b9bec5; height: 100%` })
+    );
+}
 
   //* Displays student questionnaire form */
-  showStudForm (template, studentID) {
-    // TODO: group evaluation div takes a while to disappear
+  showStudForm (template, studentID, groupID=null, studentIDs=null) {
     $('#group-evaluation-div').remove();
-    this.addToParentById(studentID, this.makeForm("student", template));
+    var form = this.makeForm("student", template);
+    if (studentIDs && studentIDs.length > 1) {
+      form.addClass('student-form');
+      this.addToParentById(groupID, form);
+    } else {
+      this.addToParentById(studentID, form);
+    }
   }
 
 
@@ -235,15 +345,17 @@ return TA.Name
 
     var saveDiv = $('<div/>', {
       id: `form-save-div`
-    }).append($('<label/>', { // initially hidden until user saves form
-      id: `form-saved-label`,
-      for: `form-save-button`,
-      html: `All changes have been saved.`
-    }).hide(), $('<button/>', {
+    }).append($('<button/>', {
       id: `form-save-button`,
       class: `save-button`,
       html: `Save`
-    }).click(evt => this.handleSaveRequest()));
+    }).click(evt => this.handleSaveRequest()),
+    $('<label/>', { // initially hidden until user saves form
+      id: `form-saved-label`,
+      class: `form-saved-text`,
+      for: `form-save-button`,
+      html: `All changes have been saved.`
+    }).hide(), );
 
     var form = $('<form/>', {
       class: (type == "group") ? `group-form` : ``,
@@ -283,7 +395,12 @@ return TA.Name
             html: `${opt}`
           });
 
-          return input.add(label);
+          let group = $('<div/>', {
+            class: 'form-group'
+          });
+          group.append(input, label);
+
+          return group;
         });
 
         return $('<fieldset/>').append($('<legend>', {
@@ -333,7 +450,8 @@ return TA.Name
       html: `${headerLabel[type]}`
     }).append($('<span/>', {
       class: 'modal-close-button',
-      html: '&times;' // unicode char for 'x' symbol
+      html: '&times;', // unicode char for 'x' symbol
+      'aria-label': `Close ${headerLabel[type]}`
     }).click(evt => this.handleModalCloseRequest()));
 
     // Add modal footer buttons
@@ -344,6 +462,12 @@ return TA.Name
       class: 'modal-request-button',
       html: `${footerLabel[type][0]}`
     }).click(evt => this.handleModalSubmitRequest(type)));
+
+    if(type == "clear" || type == "download") {
+      modalFooter.prepend($('<span/>', {
+        class: 'modal-message'
+      }))
+    }
 	}
     if (footerLabel[type].length > 1) {
       modalFooter.append($('<button/>', {
@@ -393,7 +517,7 @@ return TA.Name
       class: 'modal'
     }).append($('<div/>', {
       class: `modal-content ${(type.includes("confirm")) ? 'modal-content-short':''}`,
-    }).append(modalHeader, modalBody, modalFooter));
+    }).append(modalHeader, modalBody, modalFooter)).click(evt => {if (evt.target.id === `${type}-modal`) this.handleModalCloseRequest()});
 
     this.addToParentById('content' /* parent container */, modalDiv);
   }
@@ -430,25 +554,23 @@ return TA.Name
     switch (inputGroup) {
       case "all":
         // TODO: add option to download group responses
-        return modalElem.append(selectAll);
-      case "evaluator":
-        var evaluators = data.map(ta => {
-          let evaluatorInput = $('<input/>', {
-            id: `${sectionID}-option-${ta.NetID}`,
-            class: `sub-option`,
+        if(type == "download") {
+          var clearInput = $('<input/>', {
+            id: `${sectionID}-option-clear`,
             type: `checkbox`,
-            name: `${sectionID}`
-          }).change(evt => this.updateInputGroup(evt.currentTarget));
-          let evaluatorLabel = $('<label/>', {
-            for: `${sectionID}-option-${ta.NetID}`,
-            html: `${ta.Name} [${ta.NetID}]<br>`
+            name: `${sectionID}`,
           });
-          return $('<div/>', {
-            id: `${sectionID}-${ta.NetID}`,
-          }).append(evaluatorInput, evaluatorLabel);
-        });
+          var clearLabel = $('<label/>', {
+            for: `${sectionID}-option-clear`,
+            html: `Clear responses after downloading`
+          });
+          var clearAll = $('<div/>', {
+            id: `${sectionID}-clear`,
+          }).append(clearInput, clearLabel);
+          return modalElem.append(selectAll, clearAll);
+        }
 
-        return modalElem.append(header, selectAll, evaluators);
+        return modalElem.append(selectAll);
       case "session-group":
         let sessionIDs = Array.from(this.userInfo.Group, x => x.split('-')[0]);
         let uniqueSessionIDs = Array.from(new Set(sessionIDs));
@@ -465,8 +587,7 @@ return TA.Name
             for: `section-session-option-${sessionID}`,
             html: `Section ${sessionID}<br>`
           });
-
-          let groups = data.filter(x => x.includes(sessionID)).map(groupID => {
+          let groups = data.filter(x => x.startsWith(sessionID)).map(groupID => {
             let groupInput = $('<input/>', {
               id: `section-group-option-${groupID}`,
               class: `sub-sub-option`,
@@ -524,7 +645,30 @@ return TA.Name
   /* Handles click event when a group is selected */
   handleClickEvent (evt) {
    let clickedItem=$(evt.currentTarget);
+   if(clickedItem.attr("class").includes("group-button")) {
+    if(clickedItem.attr("id") == "edit-students") {
+      let groupID = clickedItem.attr('data-group-id');
+      let selectedStudents = this.state.selectedStudents.slice();
+      if(selectedStudents.length > 1) {
+        this.state.selectionLocked = true;
+        $(`#${groupID}`).find('.student').filter((_, student) => { //Remove students not selected from view
+          return !selectedStudents.includes($(student).attr('id'));
+        }).remove();
+        $(`#${groupID}`).find('.student').addClass('edit-mode');
+        $(`#${groupID}`).find('.group-button').hide();
+        $("#content").trigger('request:student-eval', [this.userInfo.NetID, groupID, selectedStudents]);
+        return;
+      }
+      clickedItem = $(`#${selectedStudents[0]}`);
+    }else {
+      let student = $(".student.selected").first();
+      clickedItem = student;
+    }
+   }
     console.log(clickedItem);
+    if(clickedItem.attr("class").includes("student selection-button")){ //get correct student div
+      clickedItem = $(`#${clickedItem.attr("id").replace("_view","")}`);
+    }
    // clickedItem.off("click"); // removes click event listener to prevent registering multiple clicks
 
     var clickedID = clickedItem.attr("id");
@@ -599,6 +743,9 @@ clickedItem.off("click");
 
         // notify TAHelper that a student has been selected
         let groupID = $(clickedItem.parent()[0]).attr("id");
+        $(document.getElementById(groupID)).find('.group-button').hide();
+        $(document.getElementById(groupID)).find('.selection-button').hide();
+
         $("#content").trigger('request:student-eval', [this.userInfo.NetID, groupID, clickedID]);
         break
      default:
@@ -623,15 +770,18 @@ clickedItem.off("click");
       var selectedGroup = $('.selected-group');
       if (selectedGroup.length == 0) { // backing up from all groups to all sessions
         this.removeItemsByClass("session-group");
+        this.removeItemsByClass("admin");
+        this.clearSelectedStudents();
   	//this.showHomePage()
 	this.showSessions();
         this.hideBackBtn();
       } else {
 	 whichBack=2
         // check for group evluation form
-        var groupForm = $('.group-form');
+        var groupForm = $('.group-form, .student-form');
         if (groupForm.length == 0) { // backing up from selected group to all groups
           selectedGroup.remove();
+          this.clearSelectedStudents();
 	 whichBack=2.1
           if (!this.isAdmin ) {
 	    whichBack=2.2
@@ -654,6 +804,8 @@ clickedItem.off("click");
           } else {
 		 whichBack=3.2
             groupForm.remove();
+            this.state.selectionLocked = false;
+            $(`#${selectedGrpID}`).find('.student').remove();
             this.showStudsInGroup(selectedGrpID);
           }
         }
@@ -702,7 +854,7 @@ console.log(whichBack)
 
     // add form details to data sent over to TAHelper
     var data = {"Details": null, "Response Data": changes};
-    var selected = ($('.selected-student').length > 0) ? $('.selected-student') : $('.selected-group');
+    var selected = ($('.selected-student').length > 0) ? $('.selected-student').first() : $('.selected-group');
     var selectedID = selected.attr("id");
     var formType = selected.attr("class").split(' ')[0];
 
@@ -720,9 +872,14 @@ console.log(whichBack)
     var evaluatorID = this.userInfo.NetID;
     if (formType == "student") {
       $('#content').trigger('request:save-eval', [formType, evaluatorID, groupID, selectedID, data]);
+    } else if ($('.student-form').length > 0) {
+      var studentIDs = this.state.selectedStudents.slice();
+      var multiGroupID = $('.student-form').parent().attr('id');
+      $('#content').trigger('request:save-eval', ["student", evaluatorID, multiGroupID, studentIDs, data]);
     } else { // session-group
       $('#content').trigger('request:save-eval', [formType, evaluatorID, selectedID, null, data]);
     }
+    $("#form-saved-label").show();
   }
 
 
@@ -735,6 +892,332 @@ console.log(whichBack)
 
     // notify TAHelper that user is requesting for the group evaluation form
     $('#content').trigger('request:group-eval', [this.userInfo.NetID, groupID]);
+  }
+
+  handleStudentSelection(studentID) {
+    if (this.state.selectionLocked) { return; }
+    var name = $(document.getElementById(studentID)).find('.subheader-width').first().html();
+    if(this.state.selectedStudents.includes(studentID)) {
+      this.state.selectedStudents.splice(this.state.selectedStudents.indexOf(studentID), 1);
+      $('.student#' + studentID).removeClass('selected').attr("aria-label","Select " + name);
+    }else{
+      this.state.selectedStudents.push(studentID);
+      $('.student#' + studentID).addClass('selected').attr("aria-label","Deselect " + name);
+    }
+    $('#edit-students').prop("disabled", this.state.selectedStudents.length == 0);
+  }
+
+  handleAdminRequest() {
+    $("#content").empty();
+    this.hideBackBtn();
+    this.showHomeBtn();
+
+    var adminDivs = $('<div/>', {
+      id: `admin-info`,
+      class: `admin flexContainer admin-container`
+    }).append($('<h1/>', {
+      class: `flexText header-font header-width`,
+      
+      html: `Professor Dashboard`
+    })).append($('<div/>', {
+      class: `flexText body-font`,
+      html: `Below are settings for the course. Please note, all changes will override existing configurations and data.`
+    }));
+
+    this.addToParentById("content" /* parent container */, adminDivs);
+
+    var questionDiv = $('<div/>', {
+      class: `admin-content`,
+      id: `admin-questions`
+    });
+
+    const options = [
+      {
+        "id": "load",
+        "label": "Load Roster",
+        "description": "Load a CSV file of Students or TAs into TAHelper.",
+        "button": "Upload"
+      },
+      {
+        "id": "assign",
+        "label": "Assign Roster",
+        "description": "Move students and TAs to their respective groups.",
+        "button": "Assign"
+      },
+      {
+        "id": "images",
+        "label": "Upload Images",
+        "description": "Upload a zip file of student images into TAHelper.",
+        "button": "Upload"
+      }
+    ]
+
+    options.forEach(option => {
+      var optionDiv = $('<div/>', {
+        class: `admin-content`
+      }).append($('<div/>', {
+        class: `flexText subheader-font`,
+        html: `${option.label}`,
+        style: `width: 100%`
+      })).append($('<div/>', {
+        class: `flexText body-font`,
+        html: `${option.description}`,
+        style: `width: 100%`
+      }));
+
+      var saveDiv = $('<div/>', {
+        id: `form-save-div`
+      });
+      if(option.id === 'load') {
+        var rosterInput = $('<input/>', {type: 'file', id: 'roster-file', accept: '.csv,text/csv', style: 'display: none'});
+        rosterInput.change(evt => {
+          var file = evt.currentTarget.files[0];
+          if (file) $('#content').trigger('request:admin-load-roster', [file]);
+          evt.currentTarget.value = '';
+        });
+        saveDiv.append(rosterInput, $('<label/>', {for: 'roster-file', text: 'Select a CSV file to upload', style: 'display: none'}));
+      }else if(option.id === 'images') {
+        var imageInput = $('<input/>', {type: 'file', id: 'image-zip', accept: '.zip', style: 'display: none'});
+        imageInput.change(evt => {
+          var file = evt.currentTarget.files[0];
+          if (file) $('#content').trigger('request:admin-upload-images', [file]);
+          evt.currentTarget.value = '';
+        });
+        saveDiv.append(imageInput, $('<label/>', {for: 'image-zip', text: 'Select a ZIP file to upload', style: 'display: none'}));
+      }
+      saveDiv.append($('<button/>', {
+        id: `admin-${option.id}`,
+        class: `menu-button`,
+        html: `${option.button}`
+      }).click(evt => this.handleAdminSaveRequest(option.id)),
+      $('<div/>', {
+        id: `form-saved-${option.id}`,
+        class: `form-saved-text`,
+        for: `admin-${option.id}`,
+        html: `All changes have been saved.`
+      }).hide(),);
+
+      optionDiv.append(saveDiv);
+      questionDiv.append(optionDiv);
+    });
+
+    //load roster, assign roster, update images
+
+    adminDivs.append(questionDiv);
+  }
+
+  handleAdminSaveRequest(option) {
+    this.hideSavedLabels();
+    switch (option) {
+      case "load":
+        $('#roster-file').trigger('click');
+        break;
+      case "assign":
+        this.showRosterAssignment();
+        break;
+      case "images":
+        $('#image-zip').trigger('click');
+        break;
+      default:
+        console.log("Unknown admin option: ", option)
+        return;
+    }
+  }
+
+  handleAdminHome() {
+    window.location.reload();
+  }
+
+  showRosterAssignment() {
+    const students = this.studInfo.flat();
+    //sorted list of unique groups
+    const groups = Array.from(new Set([
+      ...this.userInfo.Group,
+      ...students.map(student => student.Group)
+    ])).sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+    //create mapping of undergrad tas and their assigned groups
+    const facilitators = Object.values(this.TAInfo)
+      .filter(ta => ta.Type === ROLES.UGTA)
+      .map(ta => ({netID: ta.NetID, name: ta.Name, groups: Array.isArray(ta.Group) ? ta.Group.slice() : []}));
+    //iniitalize assignment object with current student and TA assignments
+    const assignment = {
+      students: Object.fromEntries(students.map(student => [student.NetID, student.Group])),
+      tas: Object.fromEntries(facilitators.map(ta => [ta.netID, ta.groups.slice()]))
+    };
+
+    //construct modal
+    const modal = $('<div/>', {id: 'assign-roster-modal', class: 'modal'});
+    const content = $('<div/>', {class: 'modal-content assign-roster-content'});
+    const header = $('<div/>', {class: 'modal-header', text: 'Assign Roster'})
+      .append($('<button/>', {
+        type: 'button', class: 'modal-close-button', 'aria-label': 'Close roster assignment', html: '&times;'
+      }).click(() => modal.remove()));
+    const body = $('<div/>', {class: 'modal-body assign-roster-body'});
+    const footer = $('<div/>', {class: 'modal-footer'})
+      .append($('<button/>', {class: 'modal-request-button', text: 'Cancel'}).click(() => modal.remove()))
+      .append($('<button/>', {class: 'modal-request-button', text: 'Save Changes'}).click(() => {
+        $('#content').trigger('request:admin-save-roster', [assignment]);
+        modal.remove();
+      }));
+    //available tas
+    const taList = $('<div/>', {class: 'assign-roster-options'})
+      .append($('<span/>', {class: 'assign-roster-ta-label', text: 'Undergraduate TAs'}));
+    const taListContainer = $('<div/>', {class: 'flexContainer', style: 'gap: 0.25rem 0.5rem;'});
+    const sectionColumns = $('<div/>', {class: 'assign-roster-sections'});
+
+    const showPersonActions = card => {
+      const existingActions = card.next('.assign-roster-actions');
+      if (existingActions.length) {
+        existingActions.remove();
+        return;
+      }
+      body.find('.assign-roster-actions').remove();
+      const netID = card.data('netid');
+      const personType = card.data('person-type');
+      const sourceGroup = card.data('source-group') || null;
+      const actionList = $('<div/>', {
+        class: 'assign-roster-actions', role: 'menu', 'aria-label': 'Assignment actions'
+      });
+      const addAction = (label, action) => actionList.append($('<button/>', {
+        type: 'button', role: 'menuitem', class: 'assign-roster-action', text: label
+      }).click(() => {
+        action();
+        actionList.remove();
+        refresh();
+      }));
+
+      if (personType === 'student') {
+        const currentGroup = assignment.students[netID];
+        const section = currentGroup.split('-')[0];
+        //get groups the student can move to
+        groups.filter(groupID => groupID.split('-')[0] === section && groupID !== currentGroup)
+          .forEach(groupID => addAction(`Move to Group ${groupID}`, () => {
+            assignment.students[netID] = groupID;
+          }));
+      } else {
+        const assignedGroups = assignment.tas[netID];
+        //check if ta is in a group
+        if (sourceGroup) addAction(`Remove from Group ${sourceGroup}`, () => {
+          assignment.tas[netID] = assignment.tas[netID].filter(group => group !== sourceGroup);
+        });
+        //get groups the ta can get added to
+        groups.filter(groupID => !assignedGroups.includes(groupID))
+          .forEach(groupID => addAction(`Add to Group ${groupID}`, () => {
+            Object.keys(assignment.tas).forEach(otherNetID => {
+              assignment.tas[otherNetID] = assignment.tas[otherNetID].filter(group => group !== groupID);
+            });
+            assignment.tas[netID].push(groupID);
+          }));
+      }
+
+      if (actionList.children().length === 0) {
+        actionList.append($('<span/>', {class: 'assign-roster-no-actions', text: 'No other groups available'}));
+      }
+      card.after(actionList);
+      actionList.find('button').first().trigger('focus');
+    };
+
+    const personCard = (name, netID, personType, sourceGroup = null) => {
+      const card = $('<button/>', {
+        type: 'button', class: `assign-roster-person ${personType === 'ta' ? 'assign-roster-ta' : ''}`,
+        'aria-label': `${name}, ${personType === 'ta' ? 'TA' : 'student'}`,
+        'data-netid': netID, 'data-person-type': personType, 'data-source-group': sourceGroup || ''
+      }).prop('draggable', true).append($('<span/>', {text: name}));
+      const person = $('<small/>', {text: netID});
+      card.append(person).click(evt => {
+        evt.preventDefault();
+        showPersonActions(card);
+      });
+      return card;
+    };
+    const studentCard = student => personCard(student.Name, student.NetID, 'student');
+    const taCard = (ta, sourceGroup = null) => personCard(ta.name, ta.netID, 'ta', sourceGroup);
+    facilitators.forEach(ta => taListContainer.append(taCard(ta)));
+    taList.append(taListContainer);
+
+    const refresh = () => {
+      sectionColumns.empty();
+      //get each section
+      const sections = Array.from(new Set(groups.map(groupID => groupID.split('-')[0])));
+      sections.forEach(sectionID => {
+        const sectionGroups = $('<div/>', {class: 'assign-roster-groups'});
+        //populate the group
+        groups.filter(groupID => groupID.split('-')[0] === sectionID).forEach(groupID => {
+          const groupCard = $('<section/>', {
+            class: 'assign-roster-group', 'data-group': groupID
+          });
+          //fill the TA
+          const taSlot = $('<div/>', {class: 'assign-roster-ta-slot', 'data-group': groupID})
+            .append($('<span/>', {class: 'assign-roster-ta-label', text: 'TA: '}));
+          facilitators.filter(ta => assignment.tas[ta.netID].includes(groupID))
+            .forEach(ta => taSlot.append(taCard(ta, groupID)));
+          //fill the students
+          const studentList = $('<div/>', {class: 'assign-roster-students', 'data-group': groupID});
+          students.filter(student => assignment.students[student.NetID] === groupID)
+            .forEach(student => studentList.append(studentCard(student)));
+          groupCard.append($('<h3/>', {text: `Group ${groupID}`}), taSlot, studentList);
+          sectionGroups.append(groupCard);
+        });
+        sectionColumns.append($('<section/>', {class: 'assign-roster-section'})
+          .append($('<h2/>', {text: `Section ${sectionID}`}), sectionGroups));
+      });
+      bindDropTargets();
+    };
+    //drag and drop
+    const bindDropTargets = () => {
+      body.off('.assignRoster');
+      //drag start, by person data
+      body.on('dragstart.assignRoster', '[draggable=true]', evt => {
+        const card = $(evt.currentTarget);
+        //store the netID, type, and original group of the person
+        evt.originalEvent.dataTransfer.setData('text/plain', JSON.stringify({
+          netID: card.data('netid'), type: card.data('person-type'), sourceGroup: card.data('source-group') || null
+        }));
+      });
+      //drag over other groups
+      body.on('dragover.assignRoster', '.assign-roster-group, .assign-roster-ta-slot, .assign-roster-options', evt => {
+        evt.preventDefault();
+      });
+      //drop into a group
+      body.on('drop.assignRoster', evt => {
+          evt.preventDefault();
+          const item = JSON.parse(evt.originalEvent.dataTransfer.getData('text/plain'));
+          const target = $(evt.target);
+          const groupTarget = target.closest('.assign-roster-group');
+          const optionTarget = target.closest('.assign-roster-options');
+          //reassign group if they are a student
+          if(item.type === 'student' && groupTarget.length) {
+            const sourceGroup = assignment.students[item.netID];
+            const targetGroup = groupTarget.data('group');
+            //only allow reassignment in the same section
+            if(sourceGroup.split('-')[0] === targetGroup.split('-')[0]) assignment.students[item.netID] = targetGroup;
+          }
+          //reassign the ta of a group
+          if(item.type === 'ta' && (groupTarget.length || optionTarget.length)) {
+            const groupID = optionTarget.length ? null : groupTarget.data('group');
+            //remove previous ta if one was assigned
+            if(groupID === null) {
+              if(item.sourceGroup) assignment.tas[item.netID] = assignment.tas[item.netID].filter(group => group !== item.sourceGroup);
+            } else if (!assignment.tas[item.netID].includes(groupID)) {
+              Object.keys(assignment.tas).forEach(netID => {
+                assignment.tas[netID] = assignment.tas[netID].filter(group => group !== groupID);
+              });
+              assignment.tas[item.netID].push(groupID);
+            }
+          }
+          refresh();
+        });
+      body.on('keydown.assignRoster', evt => {
+        if (evt.key === 'Escape') body.find('.assign-roster-actions').remove();
+      });
+    };
+    body.append(taList, sectionColumns);
+    refresh();
+    content.append(header, body, footer);
+    modal.append(content).click(evt => {
+      if (evt.target === modal[0]) modal.remove();
+    });
+    $('#content').append(modal);
   }
 
   /* Handles loading page visibility */
@@ -761,31 +1244,31 @@ console.log(whichBack)
           var data = {"Evaluators": [this.userInfo.NetID], "Groups": null};
 
           // prioritize select all options that are checked
-          var checkedAll = $(`input[type=checkbox][name=section-all]:checked`);
+          var checkedAll = $(`#section-all-option-all:checked`);
+          var clearAfter = modalType == "download" && ($('#section-all-option-clear:checked').length > 0);
           if (checkedAll.length > 0) {
             if (this.isAdmin) {
               $('#content').trigger(`request:${modalType}-eval`, ["all", null]);
+              if(clearAfter) {
+                $('#content').trigger(`request:clear-eval`, ["all", null]);
+                $('#download-modal .modal-message').text("Successfully cleared responses.")
+              }
             } else {
               $('#content').trigger(`request:${modalType}-eval`, ["mix", data]);
+              if(clearAfter) {
+                $('#content').trigger(`request:clear-eval`, ["mix", data]);
+                $('#download-modal .modal-message').text("Successfully cleared responses.")
+              }
             }
             break;
           }
 
           // find all modal options that are checked
-          var checkedEvaluators = $(`input[type=checkbox][name=section-evaluator]:checked`);
           var checkedGroups = $(`input[type=checkbox][name*=section-session-group-]:not([id*=session]):checked`);
-          // console.log(checkedEvaluators, checkedGroups)
-          if (checkedEvaluators.length == 0 && checkedGroups.length == 0) { return; }
-
-          if (checkedEvaluators.length > 0) {
-            let checkedAll = checkedEvaluators.filter((_, checked) => $(checked).attr("id").endsWith("-all"));
-            if (checkedAll.length > 0) {
-              var allEvaluators = Object.values(this.userInfo.Evaluators).map(evaluator => evaluator.NetID);
-              data["Evaluators"] = allEvaluators;
-            } else {
-              var evaluators = checkedEvaluators.map((_, evaluator) => $(evaluator).attr("id").split('-')[3]);
-              data["Evaluators"] = Array.from(evaluators);
-            }
+          // console.log(checkedGroups)
+          if (checkedGroups.length == 0) {
+            $('#download-modal .modal-message').text("Select a group before continuing.")
+            return;
           }
 
           if (checkedGroups.length > 0) {
@@ -796,6 +1279,10 @@ console.log(whichBack)
           // notify TAHelper that a download or clear request has been made
           // console.log(data)
           $('#content').trigger(`request:${modalType}-eval`, ["mix", data]);
+          if(clearAfter) {
+            $('#content').trigger(`request:clear-eval`, ["mix", data]);
+            $('#download-modal .modal-message').text("Successfully cleared responses.")
+          }
           break;
         case "confirm-save":
           this.handleSaveRequest();
@@ -806,6 +1293,7 @@ console.log(whichBack)
           this.handleModalSubmitRequest("download").then(() => {
             this.handleModalSubmitRequest("clear").then(() => {
               this.handleModalCloseRequest();
+              $('#clear-modal .modal-message').text("Successfully cleared responses.")
             });
           });
           break;
@@ -825,6 +1313,7 @@ console.log(whichBack)
       this.handleBackRequest();
     } else if (this.state.waitingOnClearPrompt) {
       this.handleModalSubmitRequest("clear"); // this time, passes through the if case in the handler
+      $('#clear-modal .modal-message').text("Successfully cleared responses.")
     }
 
     this.handleModalCloseRequest();
@@ -860,6 +1349,9 @@ console.log(whichBack)
     var inputGroup = inputElem.name;
     var isChecked = inputElem.checked;
     // console.log(inputElem, optionClass, inputGroup, isChecked)
+    if(inputGroup == "section-all") {
+      return;
+    }
     switch (optionClass) {
       case null: // select all option
         if (inputGroup.includes("session-group")) {
@@ -933,12 +1425,29 @@ console.log(whichBack)
     this.addToParentById('left-menu' /* parent container */, backBtn);
   }
 
+  addHomeBtn() {
+    var homeBtn = $('<button/>', { // initially hidden
+      id: 'homeBtn',
+      class: `menu-button`,
+      html: 'Home'
+    }).click(evt => this.handleAdminHome()).hide();
+
+    this.addToParentById('left-menu' /* parent container */, homeBtn);
+  }
+
   /* Adds a dropdown menu to the page */
   addDropdownMenu() {
+    var drpdwnDiv = $('<div/>', {
+      class: 'dropdown'
+    });
+    this.addToParentById('content' /* parent container */, drpdwnDiv);
     var drpdwnBtn = $('<button/>', {
       id: 'dropdownBtn',
       class: `menu-button`,
       html: 'Menu'
+    }).click(evt => {
+      $('#dropdownMenu').toggleClass("dropdown-show");
+      $('#dropdownBtn').toggleClass("menu-button-open");
     });
     var drpdwnMenu = $('<div/>', {
       id: 'dropdownMenu',
@@ -970,8 +1479,20 @@ console.log(whichBack)
       drpdwnMenu.append(downloadBtn);
     }
 
-    this.addToParentById('right-menu' /* parent container */, drpdwnBtn);
-    this.addToParentById('right-menu' /* parent container */, drpdwnMenu);
+    this.addToParentById('right-menu' /* parent container */, drpdwnDiv);
+    this.addToParentByClass('dropdown' /* parent container */, drpdwnBtn);
+    this.addToParentByClass('dropdown' /* parent container */, drpdwnMenu);
+  }
+
+  /* Adds an admin button to the top of the page */
+  addAdminBtn() {
+    var adminBtn = $('<button/>', { // initially hidden
+      id: 'adminBtn',
+      class: `menu-button`,
+      html: 'Dashboard'
+    }).click(evt => this.handleAdminRequest());
+
+    this.addToParentById('right-menu' /* parent container */, adminBtn);
   }
 
   /* Turns the loader visible or invisible  */
@@ -992,11 +1513,20 @@ console.log(whichBack)
   }
 
   /* Notifies the user that form has been saved to database */
-  showSavedLabel() { $("#form-saved-label").show(); }
+  showSavedLabel(option) {
+    $(`#form-saved-${option}`).show();
+  }
+
+  hideSavedLabels() {
+    $(`[id^="form-saved-"]`).hide();
+  }
 
   /* Turns back button visible or invisible */
   showBackBtn() { $('#backBtn').show(); }
   hideBackBtn() { $('#backBtn').hide(); }
+
+  showHomeBtn() { $('#homeBtn').show(); }
+  hideHomeBtn() { $('#homeBtn').hide(); }
 
   /* Turns left menu button visible or invisible */
   showDropdownBtn() { $('#dropdownBtn').show(); }

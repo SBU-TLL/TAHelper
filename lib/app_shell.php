@@ -21,6 +21,7 @@ if (!is_string($course) || !is_array($user)) {
 
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TAHelper <?= htmlspecialchars($course, ENT_QUOTES, 'UTF-8') ?></title>
 
   <link href="/css/index.css" rel="stylesheet" type="text/css">
@@ -41,8 +42,8 @@ if (!is_string($course) || !is_array($user)) {
   <div class="loader loader-bar is-active" data-text data-blink></div>
   <div id="left-menu" class="menu"></div>
   <div id="right-menu" class="menu"></div>
-  <div id="header"></div>
-  <div id="content" class="flexContainer"></div>
+  <div id="header">TAHelper</div>
+  <main id="content" class="flexContainer"></main>
 </body>
 
 </html>
