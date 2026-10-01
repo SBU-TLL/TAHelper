@@ -68,6 +68,8 @@ class TAHelperUI {
         this.showSavedLabel(sessionStorage.getItem('showAdmin'));
         sessionStorage.removeItem('showAdmin');
       }
+
+      $('#right-menu').addClass('right-menu-admin');
     }
     this.addDropdownMenu();
   }
@@ -104,7 +106,7 @@ class TAHelperUI {
       'aria-label': `Select Section ${sessionID}`
     }).append($('<div/>', {
       class: `flexText header-font`,
-      html: `Section ${sessionID}  ${this.sectionInfo["Section"][sessionID]}`
+      html: `Section ${sessionID}  ${this.sectionInfo["Section"][sessionID] ? ` ${this.sectionInfo["Section"][sessionID]}` : ""}`
     })).click(evt => this.handleClickEvent(evt)));
 
     this.addToParentById("content" /* parent container */, sessionDivs);
@@ -393,7 +395,12 @@ return TA.Name
             html: `${opt}`
           });
 
-          return input.add(label);
+          let group = $('<div/>', {
+            class: 'form-group'
+          });
+          group.append(input, label);
+
+          return group;
         });
 
         return $('<fieldset/>').append($('<legend>', {
@@ -921,7 +928,7 @@ console.log(whichBack)
 
     var questionDiv = $('<div/>', {
       class: `admin-content`,
-      style: "flex-direction: row"
+      id: `admin-questions`
     });
 
     const options = [
@@ -1055,7 +1062,7 @@ console.log(whichBack)
     //available tas
     const taList = $('<div/>', {class: 'assign-roster-options'})
       .append($('<span/>', {class: 'assign-roster-ta-label', text: 'Undergraduate TAs'}));
-    const taListContainer = $('<div/>', {class: 'flexContainer', style: 'gap: 1rem'});
+    const taListContainer = $('<div/>', {class: 'flexContainer', style: 'gap: 0.25rem 0.5rem;'});
     const sectionColumns = $('<div/>', {class: 'assign-roster-sections'});
 
     const showPersonActions = card => {

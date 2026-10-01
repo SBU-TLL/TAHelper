@@ -21,6 +21,7 @@ if (!is_string($course) || !is_array($user)) {
 
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TAHelper <?= htmlspecialchars($course, ENT_QUOTES, 'UTF-8') ?></title>
 
   <link href="/css/index.css" rel="stylesheet" type="text/css">

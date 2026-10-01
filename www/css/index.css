@@ -406,6 +406,11 @@ img.profile-left {
   border: 1px solid rgba(107, 0, 13, 0.15);
 }
 
+#admin-questions {
+  display: flex;
+  flex-direction: row;
+}
+
 main#content {
   max-width: 1400px;
   margin: 0 auto;
@@ -483,4 +488,105 @@ a#group-evaluation-link:focus {
   margin-top: 12px;
   font-style: italic;
   color: var(--sbu-dark-red);
+}
+
+@media (max-width: 600px) {
+  body {
+    padding-top: 0;
+  }
+
+  div#header {
+    width: auto;
+  }
+
+  div#left-menu,
+  div#right-menu {
+    position: fixed;
+    top: 25px;
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    background: transparent;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+  }
+
+  div#right-menu {
+    display: flex;
+    flex-direction: column;
+    width: 25%;
+  }
+
+  div#right-menu.right-menu-admin {
+    top: 4px;
+  }
+
+  button.menu-button {
+    margin: 0;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  main#content {
+    width: 100%;
+    padding: 1rem 0rem 2rem;
+  }
+
+  div.group-toolbar {
+    position: static;
+    width: 100%;
+    margin: 0.5rem 0 0;
+    transform: none;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+  }
+
+  div.header-width {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  button.group-button {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .flexChildren {
+    width: calc(50% - 1rem);
+    flex-basis: calc(50% - 1rem);
+  }
+
+  .card-item:not(.selected-group),
+  .subcard-item:not(.selected-student) {
+    margin: 0.5rem;
+    padding: 1rem 0.75rem;
+    height: auto;
+  }
+
+  #admin-questions {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-content-short {
+    width: 100%
+  }
+
+  .dropdown-show {
+    display: none;
+  }
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
